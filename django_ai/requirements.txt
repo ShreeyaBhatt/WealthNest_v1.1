@@ -1,0 +1,53 @@
+# ============================================================
+# django_ai/requirements.txt — Python Dependencies
+#
+# UPDATED for Python 3.13 compatibility
+# All packages pinned to versions with pre-built Windows wheels
+# so no C compiler is needed during installation.
+#
+# WHY each package:
+# - Django                : The web framework
+# - djangorestframework   : Adds REST API capabilities to Django
+# - python-decouple       : Reads .env variables cleanly
+# - google-generativeai   : Official Google Gemini API SDK
+# - scikit-learn          : Machine Learning algorithms
+# - pandas                : Data manipulation (like Excel in Python)
+# - numpy                 : Numerical computations
+# - matplotlib            : Static charts for PDF reports
+# - seaborn               : Statistical charts (boxplot/heatmap) on top of matplotlib
+# - plotly                : Interactive charts (returns JSON for React)
+# - networkx              : Building/analyzing the family-investment graph
+# - reportlab             : PDF generation
+# - kaleido               : Converts Plotly charts to images
+# - django-cors-headers   : Allows Node.js to call Django API
+# - requests              : Calling external REST APIs (market data)
+# - beautifulsoup4        : Parsing/scraping HTML pages (market data)
+# ============================================================
+
+Django==5.1.4
+djangorestframework==3.15.2
+python-decouple==3.8
+django-cors-headers==4.4.0
+
+# AI — Google Gemini
+google-generativeai==0.8.3
+
+# Machine Learning — Python 3.13 compatible versions with wheels
+scikit-learn==1.6.1
+pandas==2.2.3
+numpy==2.2.1
+
+# Charts & Visualization
+matplotlib==3.10.0
+seaborn==0.13.2
+plotly==5.24.1
+kaleido==0.2.1
+networkx==3.4.2
+
+# PDF Generation
+reportlab==4.2.5
+Pillow==11.1.0
+
+# Web Scraping & REST Clients
+requests==2.32.3
+beautifulsoup4==4.12.3

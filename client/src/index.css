@@ -1,0 +1,221 @@
+/* ============================================================
+   src/index.css — WealthNest Global Styles
+   
+   WHY do we still need CSS with Tailwind?
+   Tailwind handles component-level styling, but we still need:
+   1. CSS custom properties (variables) for dynamic theming
+   2. Base/reset styles
+   3. Complex animations that are hard to do in Tailwind
+   4. Scrollbar styling, selection colors, etc.
+   ============================================================ */
+
+/* ─── Import Tailwind Layers ─────────────────────────────── */
+/* These three directives inject Tailwind's generated CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Custom Properties (Variables) ─────────────────── */
+/* These can be changed at runtime for theming */
+:root {
+  /* Brand Colors */
+  --color-primary:    #2563eb;
+  --color-accent:     #16a34a;
+  --color-danger:     #dc2626;
+  --color-warning:    #d97706;
+
+  /* Background Colors */
+  --bg-primary:       #ffffff;
+  --bg-secondary:     #f8fafc;
+  --bg-card:          #ffffff;
+
+  /* Text Colors */
+  --text-primary:     #0f172a;
+  --text-secondary:   #475569;
+  --text-muted:       #94a3b8;
+
+  /* Border Colors */
+  --border-color:     #e2e8f0;
+
+  /* Sidebar */
+  --sidebar-width:    260px;
+
+  /* Transitions */
+  --transition-base:  0.2s ease;
+}
+
+/* ─── Dark Mode Variables ────────────────────────────────── */
+/* When 'dark' class is on <html>, these override the above */
+.dark {
+  --bg-primary:       #0f172a;
+  --bg-secondary:     #1e293b;
+  --bg-card:          #1e293b;
+  --text-primary:     #f1f5f9;
+  --text-secondary:   #94a3b8;
+  --text-muted:       #64748b;
+  --border-color:     #334155;
+}
+
+/* ─── Base Reset & Defaults ──────────────────────────────── */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;  /* Smoother fonts on Mac/iOS */
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Accessible focus styles */
+  *:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* ─── Custom Component Classes ───────────────────────────── */
+/* WHY @layer components?
+   Tailwind processes these so they can be overridden by utility classes.
+   These are reusable patterns used across the app. */
+@layer components {
+
+  /* Card — the main content container used everywhere */
+  .card {
+    @apply bg-white dark:bg-dark-800 rounded-2xl shadow-card p-6 border border-gray-100 dark:border-dark-700;
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
+  }
+
+  .card:hover {
+    @apply shadow-md;
+    transform: translateY(-1px);
+  }
+
+  /* Primary Button */
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold 
+           py-2.5 px-5 rounded-xl transition-all duration-200 
+           focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed
+           active:scale-95;
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply bg-gray-100 dark:bg-dark-700 hover:bg-gray-200 dark:hover:bg-dark-600
+           text-gray-700 dark:text-gray-200 font-semibold
+           py-2.5 px-5 rounded-xl transition-all duration-200
+           focus:ring-2 focus:ring-gray-400 focus:ring-offset-2
+           active:scale-95;
+  }
+
+  /* Danger Button */
+  .btn-danger {
+    @apply bg-danger-500 hover:bg-danger-600 text-white font-semibold 
+           py-2.5 px-5 rounded-xl transition-all duration-200
+           active:scale-95;
+  }
+
+  /* Form Input */
+  .input {
+    @apply w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+           bg-white dark:bg-dark-800 text-gray-900 dark:text-gray-100
+           placeholder-gray-400 dark:placeholder-gray-500
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           transition-all duration-200;
+  }
+
+  /* Form Label */
+  .label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
+  }
+
+  /* Badge / Tag */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-green  { @apply badge bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400; }
+  .badge-blue   { @apply badge bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400; }
+  .badge-red    { @apply badge bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400; }
+  .badge-yellow { @apply badge bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400; }
+  .badge-gray   { @apply badge bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300; }
+
+  /* Section Title */
+  .section-title {
+    @apply text-xl font-bold text-gray-900 dark:text-white;
+  }
+
+  /* Stat Card — used in Dashboard */
+  .stat-card {
+    @apply card flex items-center gap-4;
+  }
+}
+
+/* ─── Utility Additions ───────────────────────────────────── */
+@layer utilities {
+
+  /* Loading Skeleton Animation */
+  .skeleton {
+    @apply bg-gray-200 dark:bg-gray-700 rounded animate-pulse;
+  }
+
+  /* Shimmer effect for loading states */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(255,255,255,0) 0%,
+      rgba(255,255,255,0.2) 50%,
+      rgba(255,255,255,0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent;
+  }
+
+  /* Glass morphism effect */
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .glass {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* ─── Custom Scrollbar ───────────────────────────────────── */
+/* Makes the scrollbar match the dark theme */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+/* ─── Text Selection Color ───────────────────────────────── */
+::selection {
+  background-color: #3b82f6;
+  color: white;
+}

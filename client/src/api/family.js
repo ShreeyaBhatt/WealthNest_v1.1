@@ -1,0 +1,9 @@
+/**
+ * src/api/family.js — Calls to /api/families/*
+ */
+
+import api from './axios';
+
+export const getMyFamily = () => api.get('/families').then((res) => res.data);
+export const createFamily = (formData) => api.post('/families', formData).then((res) => res.data);
+export const inviteMember = (email) => api.post('/families/invite', { email }).then((res) => res.data);

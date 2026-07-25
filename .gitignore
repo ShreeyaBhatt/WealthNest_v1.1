@@ -1,0 +1,61 @@
+# ============================================================
+# WealthNest — Root .gitignore
+# This tells Git which files/folders NOT to track.
+# ============================================================
+
+# ─── Node.js ────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Environment Variables (NEVER commit these!) ────────────
+.env
+.env.local
+.env.development
+.env.production
+
+# ─── Python / Django ────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+*.pkl               # Pickle model files (regenerate via train_models)
+
+# ─── Django specific ────────────────────────────────────────
+django_ai/db.sqlite3
+django_ai/staticfiles/
+django_ai/reports/*.pdf   # Generated PDFs are temporary
+
+# ─── React / Vite ───────────────────────────────────────────
+client/dist/
+client/.vite/
+
+# ─── Uploaded Files (avatars) ────────────────────────────────
+server/uploads/avatars/*
+!server/uploads/avatars/.gitkeep
+
+# ─── OS Files ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── IDE / Editor ───────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Logs ───────────────────────────────────────────────────
+logs/
+*.log
+
+# ─── Datasets (large files — add separately if needed) ──────
+django_ai/datasets/*.csv

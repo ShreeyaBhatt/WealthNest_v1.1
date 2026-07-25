@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf \"docker\" \"docker-compose.yml\" && ls)"
+    ],
+    "additionalDirectories": [
+      "C:\\College Studies\\2nd Year\\SEM IV\\Fundamentals of Computer Science using Python - II\\WealthNest_v1.1\\docker"
+    ]
+  }
+}
