@@ -47,6 +47,9 @@
 | GET | /api/families | Get user's family | JWT |
 | POST | /api/families | Create family | JWT |
 | POST | /api/families/invite | Invite member | Head JWT |
+| PUT | /api/families | Edit family details | Head JWT |
+| DELETE | /api/families/members/:userId | Remove a member | Head JWT |
+| DELETE | /api/families/invites/:email | Cancel a pending invite | Head JWT |
 | GET | /api/investments | List investments | JWT |
 | POST | /api/investments | Add investment | JWT |
 | PUT | /api/investments/:id | Update investment | JWT |

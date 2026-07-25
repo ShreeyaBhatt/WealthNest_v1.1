@@ -141,4 +141,111 @@ const inviteMember = async (req, res) => {
   sendSuccess(res, family, 'Invitation sent');
 };
 
-module.exports = { getMyFamily, createFamily, inviteMember };
+/**
+ * PUT /api/families
+ * Edits the family's own details (name/description/currency).
+ * Same ownership rule as inviteMember: only the head of THIS family
+ * (or an admin) can do it.
+ */
+const updateFamily = async (req, res) => {
+  const family = await Family.findById(req.user.family);
+  if (!family) {
+    throw new AppError('You are not part of a family yet', 404);
+  }
+
+  if (req.user.role !== 'admin' && String(family.head) !== String(req.user._id)) {
+    throw new AppError('Only the family head can edit family details', 403);
+  }
+
+  if (req.body.name !== undefined) family.name = req.body.name;
+  if (req.body.description !== undefined) family.description = req.body.description;
+  if (req.body.currency !== undefined) family.currency = req.body.currency;
+
+  await family.save();
+
+  sendSuccess(res, family, 'Family updated');
+};
+
+/**
+ * DELETE /api/families/members/:userId
+ * Removes a member from the family. The head can't be removed this
+ * way — transferring or dissolving a family is a separate concern we
+ * don't support yet, so we just block it outright.
+ */
+const removeMember = async (req, res) => {
+  const family = await Family.findById(req.user.family);
+  if (!family) {
+    throw new AppError('You are not part of a family yet', 404);
+  }
+
+  if (req.user.role !== 'admin' && String(family.head) !== String(req.user._id)) {
+    throw new AppError('Only the family head can remove members', 403);
+  }
+
+  const { userId } = req.params;
+
+  if (String(family.head) === String(userId)) {
+    throw new AppError('The family head cannot be removed', 400);
+  }
+
+  if (!family.members.some((memberId) => String(memberId) === String(userId))) {
+    throw new AppError('This user is not a member of the family', 404);
+  }
+
+  family.members = family.members.filter((memberId) => String(memberId) !== String(userId));
+  await family.save();
+
+  const removedUser = await User.findById(userId);
+  if (removedUser) {
+    removedUser.family = null;
+    await removedUser.save();
+
+    await createNotification({
+      user: removedUser._id,
+      type: 'family_removed',
+      title: 'Removed from family',
+      message: `You've been removed from ${family.name}`,
+    });
+  }
+
+  activityLogger.emit('activity', `${removedUser?.name || 'A member'} removed from family: ${family.name}`);
+
+  sendSuccess(res, family, 'Member removed');
+};
+
+/**
+ * DELETE /api/families/invites/:email
+ * Cancels a pending invite that hasn't been accepted yet — for when
+ * you invited the wrong address or someone changed their mind.
+ */
+const cancelInvite = async (req, res) => {
+  const family = await Family.findById(req.user.family);
+  if (!family) {
+    throw new AppError('You are not part of a family yet', 404);
+  }
+
+  if (req.user.role !== 'admin' && String(family.head) !== String(req.user._id)) {
+    throw new AppError('Only the family head can cancel invites', 403);
+  }
+
+  const email = decodeURIComponent(req.params.email);
+  const before = family.pendingInvites.length;
+  family.pendingInvites = family.pendingInvites.filter((invite) => invite.email !== email);
+
+  if (family.pendingInvites.length === before) {
+    throw new AppError('No pending invite found for this email', 404);
+  }
+
+  await family.save();
+
+  sendSuccess(res, family, 'Invite cancelled');
+};
+
+module.exports = {
+  getMyFamily,
+  createFamily,
+  inviteMember,
+  updateFamily,
+  removeMember,
+  cancelInvite,
+};

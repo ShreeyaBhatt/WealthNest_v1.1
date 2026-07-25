@@ -33,4 +33,31 @@ router.post(
   familyController.inviteMember
 );
 
+router.put(
+  '/',
+  protect,
+  authorize('admin', 'family_head'),
+  [
+    body('name').optional().trim().notEmpty().withMessage('Family name cannot be empty'),
+    body('description').optional().isLength({ max: 500 }),
+    body('currency').optional().isIn(['INR', 'USD', 'EUR', 'GBP']),
+  ],
+  validate,
+  familyController.updateFamily
+);
+
+router.delete(
+  '/members/:userId',
+  protect,
+  authorize('admin', 'family_head'),
+  familyController.removeMember
+);
+
+router.delete(
+  '/invites/:email',
+  protect,
+  authorize('admin', 'family_head'),
+  familyController.cancelInvite
+);
+
 module.exports = router;
