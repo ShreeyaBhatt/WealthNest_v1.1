@@ -56,7 +56,7 @@ def chat(request):
 
     try:
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(build_prompt(message, context))
         reply = response.text
     except Exception as err:  # Gemini's SDK can raise several different error types
