@@ -53,11 +53,4 @@ router.delete(
   familyController.removeMember
 );
 
-router.delete(
-  '/invites/:email',
-  protect,
-  authorize('admin', 'family_head'),
-  familyController.cancelInvite
-);
-
 module.exports = router;

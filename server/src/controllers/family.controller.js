@@ -1,24 +1,25 @@
 /**
- * src/controllers/family.controller.js — Creating a Family & Inviting Members
+ * src/controllers/family.controller.js — Creating a Family & Adding Members
  *
  * A quick refresher on how families work (see Family.model.js):
  * - Every user can belong to AT MOST one family (User.family is a single
  *   reference, not a list).
  * - The person who creates a family becomes its "head" and their role
  *   changes from family_member to family_head.
- * - Inviting someone who already has an account adds them straight to
- *   the family. Inviting someone who doesn't have an account yet stores
- *   their email in pendingInvites — when they eventually register with
- *   that email, auth.controller.js#register joins them automatically.
+ * - Adding a member only works for people who already have a WealthNest
+ *   account — we look them up by email and attach them directly. This
+ *   is deliberate: emailing an invite link to someone without an
+ *   account would need real SMTP credentials (EMAIL_USER/EMAIL_PASS),
+ *   which most dev setups don't have configured, so that path used to
+ *   silently do nothing from the user's point of view. Simpler and
+ *   more reliable to just require the account to already exist.
  */
 
-const { v4: uuidv4 } = require('uuid');
 const Family = require('../models/Family.model');
 const User = require('../models/User.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess } = require('../utils/response');
 const { createNotification } = require('../utils/notify');
-const { sendInviteEmail } = require('../utils/email');
 const activityLogger = require('../utils/activityLogger');
 
 /**
@@ -74,8 +75,9 @@ const createFamily = async (req, res) => {
 
 /**
  * POST /api/families/invite
- * Only the head of the family (or an admin) can invite people —
- * see the authorize('admin', 'family_head') check in family.routes.js.
+ * Adds an existing WealthNest user to the family by email. Only the
+ * head of the family (or an admin) can do this — see the
+ * authorize('admin', 'family_head') check in family.routes.js.
  */
 const inviteMember = async (req, res) => {
   const { email } = req.body;
@@ -85,60 +87,48 @@ const inviteMember = async (req, res) => {
     throw new AppError('You are not part of a family yet', 404);
   }
 
-  // A family_head can only invite people into THEIR OWN family — this
-  // stops someone from guessing another family's id and inviting into it.
+  // A family_head can only add people into THEIR OWN family — this
+  // stops someone from guessing another family's id and adding into it.
   if (req.user.role !== 'admin' && String(family.head) !== String(req.user._id)) {
-    throw new AppError('Only the family head can invite members', 403);
+    throw new AppError('Only the family head can add members', 403);
   }
 
   const existingUser = await User.findOne({ email });
 
-  // ── Case 1: this email already has an account ──
-  if (existingUser) {
-    if (existingUser.family && String(existingUser.family) === String(family._id)) {
-      throw new AppError('This user is already a member of the family', 400);
-    }
-    if (existingUser.family) {
-      throw new AppError('This user already belongs to another family', 400);
-    }
-
-    family.members.push(existingUser._id);
-    await family.save();
-
-    existingUser.family = family._id;
-    await existingUser.save();
-
-    await createNotification({
-      user: existingUser._id,
-      family: family._id,
-      type: 'invite',
-      title: 'Added to family',
-      message: `You've been added to ${family.name}`,
-    });
-
-    await createNotification({
-      user: family.head,
-      family: family._id,
-      type: 'family_joined',
-      title: 'New family member',
-      message: `${existingUser.name} joined ${family.name}`,
-    });
-
-    return sendSuccess(res, family, 'Member added to family');
+  if (!existingUser) {
+    throw new AppError('No WealthNest account found with this email. Ask them to register first, then try again.', 404);
   }
 
-  // ── Case 2: nobody has registered with this email yet ──
-  const alreadyInvited = family.pendingInvites.some((invite) => invite.email === email);
-  if (alreadyInvited) {
-    throw new AppError('An invite has already been sent to this email', 400);
+  if (existingUser.family && String(existingUser.family) === String(family._id)) {
+    throw new AppError('This user is already a member of the family', 400);
+  }
+  if (existingUser.family) {
+    throw new AppError('This user already belongs to another family', 400);
   }
 
-  family.pendingInvites.push({ email, token: uuidv4() });
+  family.members.push(existingUser._id);
   await family.save();
 
-  await sendInviteEmail(email, family.name);
+  existingUser.family = family._id;
+  await existingUser.save();
 
-  sendSuccess(res, family, 'Invitation sent');
+  await createNotification({
+    user: existingUser._id,
+    family: family._id,
+    type: 'invite',
+    title: 'Added to family',
+    message: `You've been added to ${family.name}`,
+  });
+
+  await createNotification({
+    user: family.head,
+    family: family._id,
+    type: 'family_joined',
+    title: 'New family member',
+    message: `${existingUser.name} joined ${family.name}`,
+  });
+
+  sendSuccess(res, family, 'Member added to family');
 };
 
 /**
@@ -213,39 +203,10 @@ const removeMember = async (req, res) => {
   sendSuccess(res, family, 'Member removed');
 };
 
-/**
- * DELETE /api/families/invites/:email
- * Cancels a pending invite that hasn't been accepted yet — for when
- * you invited the wrong address or someone changed their mind.
- */
-const cancelInvite = async (req, res) => {
-  const family = await Family.findById(req.user.family);
-  if (!family) {
-    throw new AppError('You are not part of a family yet', 404);
-  }
-
-  if (req.user.role !== 'admin' && String(family.head) !== String(req.user._id)) {
-    throw new AppError('Only the family head can cancel invites', 403);
-  }
-
-  const email = decodeURIComponent(req.params.email);
-  const before = family.pendingInvites.length;
-  family.pendingInvites = family.pendingInvites.filter((invite) => invite.email !== email);
-
-  if (family.pendingInvites.length === before) {
-    throw new AppError('No pending invite found for this email', 404);
-  }
-
-  await family.save();
-
-  sendSuccess(res, family, 'Invite cancelled');
-};
-
 module.exports = {
   getMyFamily,
   createFamily,
   inviteMember,
   updateFamily,
   removeMember,
-  cancelInvite,
 };

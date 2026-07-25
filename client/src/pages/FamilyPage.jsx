@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector, useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
-import { FiUserPlus, FiEdit2, FiTrash2, FiX } from 'react-icons/fi';
+import { FiUserPlus, FiEdit2, FiTrash2 } from 'react-icons/fi';
 
 import {
   getMyFamily,
@@ -14,7 +14,6 @@ import {
   inviteMember,
   updateFamily,
   removeMember,
-  cancelInvite,
 } from '../api/family';
 import { getDashboard } from '../api/dashboard';
 import { getMe } from '../api/users';
@@ -93,12 +92,12 @@ const FamilyPage = () => {
     setInviting(true);
     try {
       await inviteMember(formData.email);
-      toast.success('Invitation sent');
+      toast.success('Member added');
       inviteForm.reset();
       setShowInvite(false);
       loadFamily();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not send invite');
+      toast.error(err.response?.data?.message || 'Could not add member');
     } finally {
       setInviting(false);
     }
@@ -129,18 +128,6 @@ const FamilyPage = () => {
       loadFamily();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not remove member');
-    }
-  };
-
-  const handleCancelInvite = async (email) => {
-    const ok = await confirm(`Cancel the invite to ${email}?`);
-    if (!ok) return;
-    try {
-      await cancelInvite(email);
-      toast.success('Invite cancelled');
-      loadFamily();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not cancel invite');
     }
   };
 
@@ -234,29 +221,7 @@ const FamilyPage = () => {
         </div>
       </div>
 
-      {canManage && family.pendingInvites?.length > 0 && (
-        <div>
-          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">
-            Pending Invites ({family.pendingInvites.length})
-          </h2>
-          <div className="card divide-y divide-gray-100 dark:divide-dark-700">
-            {family.pendingInvites.map((invite) => (
-              <div key={invite.email} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
-                <span className="text-sm text-gray-700 dark:text-gray-200">{invite.email}</span>
-                <button
-                  className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-500"
-                  onClick={() => handleCancelInvite(invite.email)}
-                  aria-label={`Cancel invite to ${invite.email}`}
-                >
-                  <FiX size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <Drawer open={showInvite} onClose={() => setShowInvite(false)} title="Invite a Member">
+      <Drawer open={showInvite} onClose={() => setShowInvite(false)} title="Add a Member">
         <form onSubmit={inviteForm.handleSubmit(handleInvite)} className="space-y-4">
           <div>
             <label className="label">Email</label>
@@ -268,13 +233,13 @@ const FamilyPage = () => {
             />
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            If they already have a WealthNest account, they'll join instantly. Otherwise, we'll send
-            them an email invite and they'll join automatically when they sign up.
+            They need to already have a WealthNest account — enter the email address they registered
+            with and they'll be added to the family right away.
           </p>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setShowInvite(false)}>Cancel</button>
             <button type="submit" className="btn-primary" disabled={inviting}>
-              {inviting ? 'Sending...' : 'Invite'}
+              {inviting ? 'Adding...' : 'Add'}
             </button>
           </div>
         </form>
