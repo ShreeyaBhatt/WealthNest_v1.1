@@ -11,7 +11,6 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User.model');
-const Family = require('../models/Family.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess } = require('../utils/response');
 const { sendResetEmail } = require('../utils/email');
@@ -41,20 +40,6 @@ const register = async (req, res) => {
     riskProfile,
     investmentGoal,
   });
-
-  // If someone already invited this email to a family (see
-  // family.controller.js#inviteMember), join that family automatically
-  // instead of leaving them stuck with a "pending" invite forever.
-  const invitingFamily = await Family.findOne({ 'pendingInvites.email': email });
-  if (invitingFamily) {
-    invitingFamily.members.push(user._id);
-    invitingFamily.pendingInvites = invitingFamily.pendingInvites.filter(
-      (invite) => invite.email !== email
-    );
-    await invitingFamily.save();
-
-    user.family = invitingFamily._id;
-  }
 
   // Log the brand-new user in right away by giving them tokens.
   const accessToken = user.generateAccessToken();

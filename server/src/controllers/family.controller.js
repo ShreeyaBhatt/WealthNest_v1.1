@@ -1,26 +1,38 @@
 /**
- * src/controllers/family.controller.js — Creating a Family & Adding Members
+ * src/controllers/family.controller.js — Creating a Family & Managing Members
  *
  * A quick refresher on how families work (see Family.model.js):
- * - Every user can belong to AT MOST one family (User.family is a single
- *   reference, not a list).
- * - The person who creates a family becomes its "head" and their role
- *   changes from family_member to family_head.
- * - Adding a member only works for people who already have a WealthNest
- *   account — we look them up by email and attach them directly. This
- *   is deliberate: emailing an invite link to someone without an
- *   account would need real SMTP credentials (EMAIL_USER/EMAIL_PASS),
- *   which most dev setups don't have configured, so that path used to
- *   silently do nothing from the user's point of view. Simpler and
- *   more reliable to just require the account to already exist.
+ * - Only the family head (and admins) have a real WealthNest account.
+ * - Every user can head AT MOST one family (User.family points at the
+ *   family they created).
+ * - Everyone else in the family is a FamilyMember: a profile record
+ *   (name, email, age, phone, income) the head creates/edits/deletes
+ *   directly — no login, no invite email, no account of their own.
  */
 
 const Family = require('../models/Family.model');
-const User = require('../models/User.model');
+const FamilyMember = require('../models/FamilyMember.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess } = require('../utils/response');
-const { createNotification } = require('../utils/notify');
 const activityLogger = require('../utils/activityLogger');
+
+/**
+ * Shared by every member-management action: loads the caller's family
+ * and makes sure they're actually allowed to manage it (its head, or
+ * an admin). Throws instead of returning so callers can just await it.
+ */
+const getManagedFamily = async (req) => {
+  const family = await Family.findById(req.user.family);
+  if (!family) {
+    throw new AppError('You are not part of a family yet', 404);
+  }
+
+  if (req.user.role !== 'admin' && String(family.head) !== String(req.user._id)) {
+    throw new AppError('Only the family head can manage members', 403);
+  }
+
+  return family;
+};
 
 /**
  * GET /api/families
@@ -32,7 +44,7 @@ const getMyFamily = async (req, res) => {
   }
 
   const family = await Family.findById(req.user.family)
-    .populate('members', 'name email avatar role')
+    .populate('members')
     .populate('head', 'name email');
 
   sendSuccess(res, family);
@@ -61,7 +73,7 @@ const createFamily = async (req, res) => {
     description,
     currency,
     head: req.user._id,
-    members: [req.user._id],
+    members: [],
   });
 
   req.user.family = family._id;
@@ -74,78 +86,64 @@ const createFamily = async (req, res) => {
 };
 
 /**
- * POST /api/families/invite
- * Adds an existing WealthNest user to the family by email. Only the
- * head of the family (or an admin) can do this — see the
- * authorize('admin', 'family_head') check in family.routes.js.
+ * POST /api/families/members
+ * Creates a new FamilyMember profile and adds it to the family. Only
+ * the head (or an admin) can do this.
  */
-const inviteMember = async (req, res) => {
-  const { email } = req.body;
+const addMember = async (req, res) => {
+  const family = await getManagedFamily(req);
 
-  const family = await Family.findById(req.user.family);
-  if (!family) {
-    throw new AppError('You are not part of a family yet', 404);
-  }
+  const { name, email, age, phone, monthlyIncome } = req.body;
 
-  // A family_head can only add people into THEIR OWN family — this
-  // stops someone from guessing another family's id and adding into it.
-  if (req.user.role !== 'admin' && String(family.head) !== String(req.user._id)) {
-    throw new AppError('Only the family head can add members', 403);
-  }
+  const member = await FamilyMember.create({
+    family: family._id,
+    name,
+    email,
+    age,
+    phone,
+    monthlyIncome,
+  });
 
-  const existingUser = await User.findOne({ email });
-
-  if (!existingUser) {
-    throw new AppError('No WealthNest account found with this email. Ask them to register first, then try again.', 404);
-  }
-
-  if (existingUser.family && String(existingUser.family) === String(family._id)) {
-    throw new AppError('This user is already a member of the family', 400);
-  }
-  if (existingUser.family) {
-    throw new AppError('This user already belongs to another family', 400);
-  }
-
-  family.members.push(existingUser._id);
+  family.members.push(member._id);
   await family.save();
 
-  existingUser.family = family._id;
-  await existingUser.save();
+  activityLogger.emit('activity', `Family member added: ${member.name} (family: ${family.name})`);
 
-  await createNotification({
-    user: existingUser._id,
-    family: family._id,
-    type: 'invite',
-    title: 'Added to family',
-    message: `You've been added to ${family.name}`,
-  });
+  sendSuccess(res, member, 'Member added', 201);
+};
 
-  await createNotification({
-    user: family.head,
-    family: family._id,
-    type: 'family_joined',
-    title: 'New family member',
-    message: `${existingUser.name} joined ${family.name}`,
-  });
+/**
+ * PUT /api/families/members/:memberId
+ * Edits an existing member's profile — for when someone's name changes
+ * after marriage, their age needs updating, etc.
+ */
+const updateMember = async (req, res) => {
+  const family = await getManagedFamily(req);
 
-  sendSuccess(res, family, 'Member added to family');
+  const member = await FamilyMember.findOne({ _id: req.params.memberId, family: family._id });
+  if (!member) {
+    throw new AppError('This member is not part of your family', 404);
+  }
+
+  if (req.body.name !== undefined) member.name = req.body.name;
+  if (req.body.email !== undefined) member.email = req.body.email;
+  if (req.body.age !== undefined) member.age = req.body.age;
+  if (req.body.phone !== undefined) member.phone = req.body.phone;
+  if (req.body.monthlyIncome !== undefined) member.monthlyIncome = req.body.monthlyIncome;
+
+  await member.save();
+
+  sendSuccess(res, member, 'Member updated');
 };
 
 /**
  * PUT /api/families
  * Edits the family's own details (name/description/currency).
- * Same ownership rule as inviteMember: only the head of THIS family
- * (or an admin) can do it.
+ * Same ownership rule as the member routes: only the head of THIS
+ * family (or an admin) can do it.
  */
 const updateFamily = async (req, res) => {
-  const family = await Family.findById(req.user.family);
-  if (!family) {
-    throw new AppError('You are not part of a family yet', 404);
-  }
-
-  if (req.user.role !== 'admin' && String(family.head) !== String(req.user._id)) {
-    throw new AppError('Only the family head can edit family details', 403);
-  }
+  const family = await getManagedFamily(req);
 
   if (req.body.name !== undefined) family.name = req.body.name;
   if (req.body.description !== undefined) family.description = req.body.description;
@@ -157,48 +155,28 @@ const updateFamily = async (req, res) => {
 };
 
 /**
- * DELETE /api/families/members/:userId
- * Removes a member from the family. The head can't be removed this
- * way — transferring or dissolving a family is a separate concern we
- * don't support yet, so we just block it outright.
+ * DELETE /api/families/members/:memberId
+ * Deletes a member's profile entirely — for when someone was added by
+ * mistake, or (per the household's real-world circumstances) no longer
+ * needs to be tracked. This is a hard delete: since investments aren't
+ * wired to individual members yet, there's nothing else pointing at
+ * this record that would be left dangling.
  */
 const removeMember = async (req, res) => {
-  const family = await Family.findById(req.user.family);
-  if (!family) {
-    throw new AppError('You are not part of a family yet', 404);
+  const family = await getManagedFamily(req);
+
+  const { memberId } = req.params;
+
+  if (!family.members.some((id) => String(id) === String(memberId))) {
+    throw new AppError('This member is not part of your family', 404);
   }
 
-  if (req.user.role !== 'admin' && String(family.head) !== String(req.user._id)) {
-    throw new AppError('Only the family head can remove members', 403);
-  }
+  const member = await FamilyMember.findByIdAndDelete(memberId);
 
-  const { userId } = req.params;
-
-  if (String(family.head) === String(userId)) {
-    throw new AppError('The family head cannot be removed', 400);
-  }
-
-  if (!family.members.some((memberId) => String(memberId) === String(userId))) {
-    throw new AppError('This user is not a member of the family', 404);
-  }
-
-  family.members = family.members.filter((memberId) => String(memberId) !== String(userId));
+  family.members = family.members.filter((id) => String(id) !== String(memberId));
   await family.save();
 
-  const removedUser = await User.findById(userId);
-  if (removedUser) {
-    removedUser.family = null;
-    await removedUser.save();
-
-    await createNotification({
-      user: removedUser._id,
-      type: 'family_removed',
-      title: 'Removed from family',
-      message: `You've been removed from ${family.name}`,
-    });
-  }
-
-  activityLogger.emit('activity', `${removedUser?.name || 'A member'} removed from family: ${family.name}`);
+  activityLogger.emit('activity', `Family member removed: ${member?.name || 'unknown'} (family: ${family.name})`);
 
   sendSuccess(res, family, 'Member removed');
 };
@@ -206,7 +184,8 @@ const removeMember = async (req, res) => {
 module.exports = {
   getMyFamily,
   createFamily,
-  inviteMember,
+  addMember,
+  updateMember,
   updateFamily,
   removeMember,
 };

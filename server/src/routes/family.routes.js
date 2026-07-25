@@ -25,12 +25,33 @@ router.post(
 );
 
 router.post(
-  '/invite',
+  '/members',
   protect,
   authorize('admin', 'family_head'),
-  [body('email').isEmail().withMessage('Valid email is required').normalizeEmail()],
+  [
+    body('name').trim().notEmpty().withMessage('Name is required'),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Must be a valid email').normalizeEmail(),
+    body('age').optional({ checkFalsy: true }).isInt({ min: 0, max: 120 }).withMessage('Age must be between 0 and 120'),
+    body('phone').optional({ checkFalsy: true }).isLength({ max: 20 }),
+    body('monthlyIncome').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Monthly income cannot be negative'),
+  ],
   validate,
-  familyController.inviteMember
+  familyController.addMember
+);
+
+router.put(
+  '/members/:memberId',
+  protect,
+  authorize('admin', 'family_head'),
+  [
+    body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Must be a valid email').normalizeEmail(),
+    body('age').optional({ checkFalsy: true }).isInt({ min: 0, max: 120 }).withMessage('Age must be between 0 and 120'),
+    body('phone').optional({ checkFalsy: true }).isLength({ max: 20 }),
+    body('monthlyIncome').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Monthly income cannot be negative'),
+  ],
+  validate,
+  familyController.updateMember
 );
 
 router.put(
@@ -47,7 +68,7 @@ router.put(
 );
 
 router.delete(
-  '/members/:userId',
+  '/members/:memberId',
   protect,
   authorize('admin', 'family_head'),
   familyController.removeMember

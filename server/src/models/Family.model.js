@@ -1,18 +1,21 @@
 /**
  * src/models/Family.model.js — Family Schema
  *
- * CONCEPT: A "Family" groups multiple users together.
- * One user is the "head" — they manage the family.
- * Other users are "members" — they can view and add investments.
+ * CONCEPT: A "Family" has exactly one head — a real User who logs in
+ * and manages everything. Everyone else is a FamilyMember: a profile
+ * record (name, email, age, phone, income) the head adds/edits/deletes
+ * directly. Members don't have accounts and can't log in themselves —
+ * see FamilyMember.model.js.
  *
  * RELATIONSHIP DIAGRAM:
- * Family ──< Members (Users)
+ * Family ──1 Head (User)
+ * Family ──< Members (FamilyMember profiles)
  * Family ──< Investments
  *
  * WHY store members as an array of ObjectIds?
  * MongoDB supports this pattern natively. You can populate them later:
- *   Family.findById(id).populate('members', 'name email avatar')
- * This gives you the full user objects, not just IDs.
+ *   Family.findById(id).populate('members')
+ * This gives you the full FamilyMember documents, not just IDs.
  */
 
 const mongoose = require('mongoose');
@@ -43,21 +46,13 @@ const familySchema = new mongoose.Schema(
     },
 
     // ─── Members List ─────────────────────────────────────────
-    // Array of user references — all members including the head
+    // Array of FamilyMember references — profile records the head
+    // manages directly. The head themself is NOT in this array; they're
+    // tracked separately above via `head` (a User).
     members: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-      },
-    ],
-
-    // ─── Invitations ─────────────────────────────────────────
-    // Pending invites — emails of people not yet registered
-    pendingInvites: [
-      {
-        email: { type: String, lowercase: true },
-        invitedAt: { type: Date, default: Date.now },
-        token: String,    // Unique invite token sent via email
+        ref: 'FamilyMember',
       },
     ],
 

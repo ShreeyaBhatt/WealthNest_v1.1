@@ -2,9 +2,7 @@
  * src/utils/email.js — Sending Emails with Nodemailer
  *
  * WHY?
- * Two features need to email a user: "forgot password" (send a reset
- * link) and "family invite" (send a join link). This file has one
- * function for each.
+ * The "forgot password" flow needs to email a reset link.
  *
  * DEV NOTE:
  * Real email sending needs a Gmail address + "App Password" in
@@ -51,36 +49,4 @@ const sendResetEmail = async (to, rawToken) => {
   }
 };
 
-/**
- * sendInviteEmail — emails a family-invite link to someone who isn't
- * registered yet. When they register with this email, they'll be
- * automatically added to the family (see auth.controller.js#register).
- */
-const sendInviteEmail = async (to, familyName) => {
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-  const link = `${clientUrl}/register?invite=${encodeURIComponent(to)}`;
-  const subject = `WealthNest — You've been invited to join ${familyName}`;
-  const text = `You've been invited to join the "${familyName}" family on WealthNest. Register with this email address to join automatically:\n\n${link}`;
-
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log(`[email] (dev mode, no credentials set) To: ${to}\n${text}`);
-    return;
-  }
-
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  try {
-    await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, text });
-  } catch (err) {
-    console.error('[email] Failed to send invite email:', err.message);
-    console.log(`[email] (fallback) To: ${to}\n${text}`);
-  }
-};
-
-module.exports = { sendResetEmail, sendInviteEmail };
+module.exports = { sendResetEmail };
