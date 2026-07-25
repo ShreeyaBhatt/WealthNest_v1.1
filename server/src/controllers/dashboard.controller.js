@@ -76,11 +76,25 @@ const getDashboard = async (req, res) => {
         byMember: [
           { $group: { _id: '$owner', value: { $sum: '$currentValue' } } },
           { $sort: { value: -1 } },
-          // $lookup joins in the owning User document (like a SQL JOIN)
-          // so we can show a name instead of a raw ObjectId.
-          { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'ownerInfo' } },
-          { $unwind: '$ownerInfo' },
-          { $project: { _id: 0, name: '$ownerInfo.name', value: 1 } },
+          // An investment's owner can be EITHER a User (the head) OR a
+          // FamilyMember profile — see Investment.model.js's `ownerType`
+          // dynamic ref. $lookup can't follow that automatically the
+          // way .populate() can, so we join both collections and take
+          // whichever one actually matched.
+          { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'userInfo' } },
+          { $lookup: { from: 'familymembers', localField: '_id', foreignField: '_id', as: 'memberInfo' } },
+          {
+            $project: {
+              _id: 0,
+              value: 1,
+              name: {
+                $ifNull: [
+                  { $arrayElemAt: ['$userInfo.name', 0] },
+                  { $arrayElemAt: ['$memberInfo.name', 0] },
+                ],
+              },
+            },
+          },
         ],
       },
     },

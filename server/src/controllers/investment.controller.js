@@ -9,6 +9,7 @@
 
 const Investment = require('../models/Investment.model');
 const Family = require('../models/Family.model');
+const FamilyMember = require('../models/FamilyMember.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess, sendPaginated } = require('../utils/response');
 const { createNotification } = require('../utils/notify');
@@ -20,6 +21,40 @@ const { createNotification } = require('../utils/notify');
 // and a deliberately crafted search string could make the regex engine
 // do a lot of unnecessary work.
 const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Figures out who an investment should be attributed to. Defaults to
+ * "the logged-in head themself" when the request doesn't specify an
+ * owner (this keeps the old behavior working for callers that don't
+ * send owner/ownerType at all). When it IS specified, we double-check
+ * it actually points at someone in the caller's own family — otherwise
+ * a request could tag an investment onto a stranger's account or a
+ * different family's member by guessing an ID.
+ */
+const resolveOwner = async (req) => {
+  const { owner, ownerType } = req.body;
+
+  if (!owner || !ownerType) {
+    return { owner: req.user._id, ownerType: 'User' };
+  }
+
+  if (ownerType === 'User') {
+    if (String(owner) !== String(req.user._id)) {
+      throw new AppError('Investments can only be tagged to yourself or a family member', 400);
+    }
+    return { owner, ownerType };
+  }
+
+  if (ownerType === 'FamilyMember') {
+    const member = await FamilyMember.findOne({ _id: owner, family: req.user.family });
+    if (!member) {
+      throw new AppError('This member is not part of your family', 400);
+    }
+    return { owner, ownerType };
+  }
+
+  throw new AppError('ownerType must be User or FamilyMember', 400);
+};
 
 /**
  * GET /api/investments
@@ -97,6 +132,8 @@ const createInvestment = async (req, res) => {
     sector,
   } = req.body;
 
+  const { owner, ownerType } = await resolveOwner(req);
+
   const investment = await Investment.create({
     name,
     category,
@@ -110,7 +147,8 @@ const createInvestment = async (req, res) => {
     identifier,
     sipAmount,
     sector,
-    owner: req.user._id,
+    owner,
+    ownerType,
     family: req.user.family,
   });
 
@@ -167,6 +205,16 @@ const updateInvestment = async (req, res) => {
   if (req.body.identifier !== undefined) investment.identifier = req.body.identifier;
   if (req.body.sipAmount !== undefined) investment.sipAmount = req.body.sipAmount;
   if (req.body.sector !== undefined) investment.sector = req.body.sector;
+
+  // Only touch ownership if the request actually sent both fields —
+  // unlike createInvestment, there's no sensible "default" here, since
+  // silently resetting the owner back to the head on every edit that
+  // doesn't mention it would overwrite whoever it was actually set to.
+  if (req.body.owner !== undefined && req.body.ownerType !== undefined) {
+    const resolved = await resolveOwner(req);
+    investment.owner = resolved.owner;
+    investment.ownerType = resolved.ownerType;
+  }
 
   await investment.save();
   sendSuccess(res, investment, 'Investment updated');

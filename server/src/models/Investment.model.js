@@ -105,10 +105,24 @@ const investmentSchema = new mongoose.Schema(
     },
 
     // ─── Ownership ────────────────────────────────────────────
-    // Which user owns this investment
+    // Which family member this investment belongs to. This can be
+    // EITHER the head (a User) OR a family member profile (a
+    // FamilyMember) — `ownerType` tells Mongoose which collection to
+    // look in when populating `owner` (this is called a "dynamic
+    // reference", via `refPath` instead of a fixed `ref`).
+    ownerType: {
+      type: String,
+      enum: {
+        values: ['User', 'FamilyMember'],
+        message: 'ownerType must be User or FamilyMember',
+      },
+      required: true,
+      default: 'User',
+    },
+
     owner: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      refPath: 'ownerType',
       required: [true, 'Investment must have an owner'],
     },
 

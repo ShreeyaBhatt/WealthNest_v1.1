@@ -41,6 +41,8 @@ router.post(
     body('amount').isFloat({ min: 1 }).withMessage('Amount must be greater than 0'),
     body('currentValue').isFloat({ min: 0 }).withMessage('Current value cannot be negative'),
     body('purchaseDate').notEmpty().withMessage('Purchase date is required'),
+    body('ownerType').optional().isIn(['User', 'FamilyMember']).withMessage('Invalid ownerType'),
+    body('owner').optional().isMongoId().withMessage('Invalid owner id'),
   ],
   validate,
   investmentController.createInvestment
@@ -53,6 +55,8 @@ router.put(
     body('category').optional().isIn(CATEGORIES).withMessage('Invalid investment category'),
     body('amount').optional().isFloat({ min: 1 }).withMessage('Amount must be greater than 0'),
     body('currentValue').optional().isFloat({ min: 0 }).withMessage('Current value cannot be negative'),
+    body('ownerType').optional().isIn(['User', 'FamilyMember']).withMessage('Invalid ownerType'),
+    body('owner').optional().isMongoId().withMessage('Invalid owner id'),
   ],
   validate,
   investmentController.updateInvestment

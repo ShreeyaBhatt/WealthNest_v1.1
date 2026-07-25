@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiChevronUp, FiChevronDown, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
 import { getInvestments, createInvestment, updateInvestment, deleteInvestment } from '../api/investments';
+import { getMyFamily } from '../api/family';
 import { selectCurrentUser } from '../redux/slices/authSlice';
 import { useConfirm } from '../context/ConfirmDialogContext';
 import Drawer from '../components/Drawer';
@@ -39,10 +40,21 @@ const InvestmentsPage = () => {
   const [sort, setSort] = useState({ key: 'name', dir: 'asc' });
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null); // null = adding new, object = editing existing
+  const [family, setFamily] = useState(null); // head + members, for the "Owner" picker
 
   const user = useSelector(selectCurrentUser);
   const confirm = useConfirm();
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
+
+  // "Owner" is stored on the form as a single "Type:id" string (e.g.
+  // "User:64f..." or "FamilyMember:64f...") since a <select> can only
+  // hold one value — split back into { owner, ownerType } on submit.
+  const ownerOptions = family
+    ? [
+        { key: `User:${family.head._id}`, label: `${family.head.name} (Head)` },
+        ...family.members.map((m) => ({ key: `FamilyMember:${m._id}`, label: m.name })),
+      ]
+    : [];
 
   const loadInvestments = async () => {
     setLoading(true);
@@ -63,6 +75,10 @@ const InvestmentsPage = () => {
     loadInvestments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
+
+  useEffect(() => {
+    getMyFamily().then((res) => setFamily(res.data)).catch(() => setFamily(null));
+  }, []);
 
   const handleSearch = () => {
     setPage(1); // a new search always starts back at page 1
@@ -91,7 +107,10 @@ const InvestmentsPage = () => {
 
   const openAddForm = () => {
     setEditing(null);
-    reset({ name: '', category: 'mutual_fund', amount: '', currentValue: '', purchaseDate: '', riskLevel: 'medium', notes: '' });
+    reset({
+      name: '', category: 'mutual_fund', amount: '', currentValue: '', purchaseDate: '', riskLevel: 'medium', notes: '',
+      ownerKey: family ? `User:${family.head._id}` : '',
+    });
     setShowForm(true);
   };
 
@@ -105,12 +124,15 @@ const InvestmentsPage = () => {
       purchaseDate: investment.purchaseDate?.slice(0, 10),
       riskLevel: investment.riskLevel,
       notes: investment.notes,
+      ownerKey: `${investment.ownerType}:${investment.owner?._id}`,
     });
     setShowForm(true);
   };
 
   const onSubmit = async (formData) => {
-    const payload = { ...formData, amount: Number(formData.amount), currentValue: Number(formData.currentValue) };
+    const { ownerKey, ...rest } = formData;
+    const [ownerType, owner] = ownerKey.split(':');
+    const payload = { ...rest, owner, ownerType, amount: Number(formData.amount), currentValue: Number(formData.currentValue) };
     try {
       if (editing) {
         await updateInvestment(editing._id, payload);
@@ -242,6 +264,13 @@ const InvestmentsPage = () => {
             <label className="label">Name</label>
             <input className="input" {...register('name', { required: 'Name is required' })} />
             {errors.name && <p className="text-danger-500 text-sm mt-1">{errors.name.message}</p>}
+          </div>
+
+          <div>
+            <label className="label">Owner</label>
+            <select className="input" {...register('ownerKey', { required: true })}>
+              {ownerOptions.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
