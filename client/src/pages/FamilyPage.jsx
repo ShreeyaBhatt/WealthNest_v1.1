@@ -32,6 +32,7 @@ const FamilyPage = () => {
   const [loading, setLoading] = useState(true);
   const [inviting, setInviting] = useState(false);
   const [showEditFamily, setShowEditFamily] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
 
   const user = useSelector(selectCurrentUser);
   const dispatch = useDispatch();
@@ -94,6 +95,7 @@ const FamilyPage = () => {
       await inviteMember(formData.email);
       toast.success('Invitation sent');
       inviteForm.reset();
+      setShowInvite(false);
       loadFamily();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not send invite');
@@ -191,7 +193,7 @@ const FamilyPage = () => {
         {canManage && (
           <button
             className="btn-primary flex items-center gap-2"
-            onClick={() => document.getElementById('invite-form')?.scrollIntoView({ behavior: 'smooth' })}
+            onClick={() => setShowInvite(true)}
           >
             <FiUserPlus /> Add Member
           </button>
@@ -254,22 +256,29 @@ const FamilyPage = () => {
         </div>
       )}
 
-      {canManage && (
-        <div id="invite-form" className="card max-w-md">
-          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Invite a Member</h2>
-          <form onSubmit={inviteForm.handleSubmit(handleInvite)} className="flex gap-3">
+      <Drawer open={showInvite} onClose={() => setShowInvite(false)} title="Invite a Member">
+        <form onSubmit={inviteForm.handleSubmit(handleInvite)} className="space-y-4">
+          <div>
+            <label className="label">Email</label>
             <input
               type="email"
               className="input"
               placeholder="member@example.com"
               {...inviteForm.register('email', { required: true })}
             />
-            <button type="submit" className="btn-primary shrink-0" disabled={inviting}>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            If they already have a WealthNest account, they'll join instantly. Otherwise, we'll send
+            them an email invite and they'll join automatically when they sign up.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" className="btn-secondary" onClick={() => setShowInvite(false)}>Cancel</button>
+            <button type="submit" className="btn-primary" disabled={inviting}>
               {inviting ? 'Sending...' : 'Invite'}
             </button>
-          </form>
-        </div>
-      )}
+          </div>
+        </form>
+      </Drawer>
 
       <Drawer open={showEditFamily} onClose={() => setShowEditFamily(false)} title="Edit Family">
         <form onSubmit={editForm.handleSubmit(handleUpdateFamily)} className="space-y-4">
