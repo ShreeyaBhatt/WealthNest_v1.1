@@ -111,6 +111,15 @@ const sendMessage = async (req, res) => {
       totalInvested,
       totalValue,
       categories: [...new Set(investments.map((inv) => inv.category))],
+      // Without this, the AI only sees totals and bare category names —
+      // it can't answer "which one has the best return" or "how much
+      // gold do I have" without a number attached to each investment.
+      breakdown: investments.map((inv) => ({
+        name: inv.name,
+        category: inv.category,
+        invested: inv.amount,
+        currentValue: inv.currentValue,
+      })),
     };
   }
 
