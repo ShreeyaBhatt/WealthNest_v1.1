@@ -45,6 +45,14 @@ class PredictFutureView(APIView):
         else:
             implied_growth_rate = 0
 
+        # The regressor can occasionally return an unrealistic 1-year
+        # value for an unusual combination of inputs (it's an unregularized
+        # polynomial model — see train_models.py). Compounding an extreme
+        # implied rate forward for 3/5 years would turn one bad guess into
+        # an even more absurd number (e.g. collapsing toward ₹0), so we
+        # clamp it to a plausible annual range before projecting forward.
+        implied_growth_rate = max(-0.3, min(0.3, implied_growth_rate))
+
         three_year_value = total_invested * (1 + implied_growth_rate) ** 3
         five_year_value = total_invested * (1 + implied_growth_rate) ** 5
 
