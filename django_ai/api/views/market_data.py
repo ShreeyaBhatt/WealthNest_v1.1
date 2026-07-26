@@ -7,7 +7,12 @@ Two syllabus skills live side by side here:
    required).
 2. "Web scraping using BeautifulSoup" — pull real text out of a
    webpage's raw HTML (not a clean API), and save what we scraped to
-   a CSV file, exactly like the practical task asks for.
+   a CSV file, exactly like the practical task asks for. This scrapes
+   Wikipedia's "Asset allocation" article — practical tips on spreading
+   money across different investment categories to balance risk and
+   reward, which is directly relevant to a multi-category portfolio
+   tracker like WealthNest (as opposed to a page about one specific
+   asset, e.g. gold).
 
 Both external calls are wrapped in try/except and the combined result
 is cached in memory for an hour. External websites are the one part of
@@ -16,6 +21,7 @@ or go down — and none of that should ever break WealthNest itself.
 """
 
 import csv
+import re
 import time
 from pathlib import Path
 
@@ -26,7 +32,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 COINGECKO_URL = 'https://api.coingecko.com/api/v3/simple/price'
-GOLD_WIKI_URL = 'https://en.wikipedia.org/wiki/Gold_as_an_investment'
+INVESTMENT_TIPS_WIKI_URL = 'https://en.wikipedia.org/wiki/Asset_allocation'
 
 _cache = {'data': None, 'fetched_at': 0}
 CACHE_SECONDS = 60 * 60  # 1 hour
@@ -53,11 +59,11 @@ def fetch_live_prices():
         return {'goldPricePerOunceINR': None, 'bitcoinPriceINR': None}
 
 
-def scrape_gold_summary():
+def scrape_investment_tips():
     """Unit 7.1 — Web scraping using BeautifulSoup."""
     try:
         response = requests.get(
-            GOLD_WIKI_URL, timeout=5, headers={'User-Agent': 'WealthNest-Student-Project/1.0'}
+            INVESTMENT_TIPS_WIKI_URL, timeout=5, headers={'User-Agent': 'WealthNest-Student-Project/1.0'}
         )
         response.raise_for_status()
 
@@ -72,7 +78,22 @@ def scrape_gold_summary():
         paragraphs = []
         if article:
             for p in article.find_all('p'):
-                text = p.get_text(strip=True)
+                # Drop citation markers like "[1]" — they're meaningless
+                # without the footnotes they point to, and without this
+                # they'd show up as a stray "[ 1 ]" in the scraped text.
+                for sup in p.find_all('sup'):
+                    sup.decompose()
+
+                # get_text(strip=True) with no separator glues together
+                # text from adjacent inline tags (links, citations) with
+                # no space, e.g. "allocationis" instead of "allocation is".
+                # separator=' ' fixes that, but then adds a stray space
+                # before punctuation like commas — the two regex passes
+                # below clean that back up.
+                text = p.get_text(separator=' ', strip=True)
+                text = re.sub(r'\s+([,.;:])', r'\1', text)
+                text = re.sub(r'\s+', ' ', text).strip()
+
                 if text:
                     paragraphs.append(text)
                 if len(paragraphs) >= 3:
@@ -87,7 +108,7 @@ def scrape_gold_summary():
 def save_paragraphs_to_csv(paragraphs):
     """The practical task explicitly asks for scraped data to be saved
     into a CSV file — this is that step."""
-    csv_path = Path(settings.BASE_DIR) / 'datasets' / 'scraped_gold_summary.csv'
+    csv_path = Path(settings.BASE_DIR) / 'datasets' / 'scraped_investment_tips.csv'
     csv_path.parent.mkdir(exist_ok=True)
 
     with open(csv_path, 'w', newline='', encoding='utf-8') as f:
@@ -102,7 +123,7 @@ def market_data(request):
     """
     GET /api/market-data/
     Returns live gold/bitcoin reference prices plus a short scraped
-    summary about gold investing — cached for an hour at a time.
+    summary of investment-allocation tips — cached for an hour at a time.
     """
     now = time.time()
     if _cache['data'] and (now - _cache['fetched_at']) < CACHE_SECONDS:
@@ -110,7 +131,7 @@ def market_data(request):
 
     data = {
         **fetch_live_prices(),
-        'goldSummary': scrape_gold_summary(),
+        'investmentTipsSummary': scrape_investment_tips(),
     }
     _cache['data'] = data
     _cache['fetched_at'] = now

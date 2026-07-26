@@ -58,7 +58,7 @@ const AnalyticsPage = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="card">
-            <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Allocation (Plotly, interactive)</h2>
+            <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Allocation</h2>
             <Plot
               data={analytics.categoryChartPlotly.data}
               layout={{ ...analytics.categoryChartPlotly.layout, autosize: true, height: 320 }}
@@ -68,7 +68,7 @@ const AnalyticsPage = () => {
           </div>
 
           <div className="card">
-            <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Value by Category (Seaborn)</h2>
+            <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Value by Category</h2>
             {analytics.categoryChartPNG && (
               <img
                 src={`data:image/png;base64,${analytics.categoryChartPNG}`}
@@ -82,7 +82,7 @@ const AnalyticsPage = () => {
 
       {memberNodes.length > 0 && (
         <div className="card">
-          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Family Investment Graph (NetworkX)</h2>
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Family Investment Graph</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
             Each member's "degree" below is how many investments connect to them in the graph.
           </p>
@@ -98,22 +98,32 @@ const AnalyticsPage = () => {
 
       {market && (
         <div className="card">
-          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Live Market Reference (requests + BeautifulSoup)</h2>
-          <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-            <div>
-              <p className="text-gray-500 dark:text-gray-400">Gold (per oz, INR)</p>
-              <p className="text-lg font-semibold">{market.goldPricePerOunceINR ?? '—'}</p>
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Asset Allocation Tips</h2>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">Scraped live from Wikipedia</p>
+
+          {market.investmentTipsSummary?.length > 0 ? (
+            <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2 mb-4">
+              {market.investmentTipsSummary.map((para, i) => <p key={i}>{para}</p>)}
             </div>
-            <div>
-              <p className="text-gray-500 dark:text-gray-400">Bitcoin (INR)</p>
-              <p className="text-lg font-semibold">{market.bitcoinPriceINR ?? '—'}</p>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Tips are unavailable right now — try again later.</p>
+          )}
+
+          <div className="pt-3 border-t border-gray-100 dark:border-dark-700">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
+              Live Reference Prices
+            </p>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500 dark:text-gray-400">Gold (per oz, INR)</p>
+                <p className="text-lg font-semibold">{market.goldPricePerOunceINR ?? '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400">Bitcoin (INR)</p>
+                <p className="text-lg font-semibold">{market.bitcoinPriceINR ?? '—'}</p>
+              </div>
             </div>
           </div>
-          {market.goldSummary?.length > 0 && (
-            <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-              {market.goldSummary.map((para, i) => <p key={i}>{para}</p>)}
-            </div>
-          )}
         </div>
       )}
     </div>
