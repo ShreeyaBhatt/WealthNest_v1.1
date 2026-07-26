@@ -10,11 +10,19 @@
 const Notification = require('../models/Notification.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess, sendPaginated } = require('../utils/response');
+const { checkMaturityReminders } = require('../utils/notify');
 
 /**
  * GET /api/notifications
+ * Also runs the maturity-reminder check for the caller's family first,
+ * so any investment that's newly within its reminder window shows up
+ * without needing a background job (see utils/notify.js).
  */
 const getNotifications = async (req, res) => {
+  if (req.user.family) {
+    await checkMaturityReminders(req.user.family);
+  }
+
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 20;
 

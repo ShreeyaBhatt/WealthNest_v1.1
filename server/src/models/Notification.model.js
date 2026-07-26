@@ -37,7 +37,7 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: {
-        values: ['invite', 'investment_added', 'family_joined', 'family_removed', 'system'],
+        values: ['invite', 'investment_added', 'family_joined', 'family_removed', 'system', 'maturity_reminder'],
         message: 'Invalid notification type',
       },
     },
