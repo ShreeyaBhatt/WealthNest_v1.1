@@ -12,6 +12,7 @@
 
 const Family = require('../models/Family.model');
 const FamilyMember = require('../models/FamilyMember.model');
+const Investment = require('../models/Investment.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess } = require('../utils/response');
 const activityLogger = require('../utils/activityLogger');
@@ -157,10 +158,9 @@ const updateFamily = async (req, res) => {
 /**
  * DELETE /api/families/members/:memberId
  * Deletes a member's profile entirely — for when someone was added by
- * mistake, or (per the household's real-world circumstances) no longer
- * needs to be tracked. This is a hard delete: since investments aren't
- * wired to individual members yet, there's nothing else pointing at
- * this record that would be left dangling.
+ * mistake, or no longer needs to be tracked. Blocks the delete if they
+ * still own investments (Investment.owner can point at a FamilyMember),
+ * so we don't leave those investments pointing at nothing.
  */
 const removeMember = async (req, res) => {
   const family = await getManagedFamily(req);
@@ -169,6 +169,18 @@ const removeMember = async (req, res) => {
 
   if (!family.members.some((id) => String(id) === String(memberId))) {
     throw new AppError('This member is not part of your family', 404);
+  }
+
+  const ownsInvestments = await Investment.exists({
+    owner: memberId,
+    ownerType: 'FamilyMember',
+    isActive: true,
+  });
+  if (ownsInvestments) {
+    throw new AppError(
+      'This member still owns investments — reassign or delete those first before removing them',
+      400
+    );
   }
 
   const member = await FamilyMember.findByIdAndDelete(memberId);

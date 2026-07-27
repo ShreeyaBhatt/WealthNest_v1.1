@@ -13,13 +13,17 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import Plot from 'react-plotly.js';
 import toast from 'react-hot-toast';
 
 import { getAnalytics } from '../api/dashboard';
 import { getMarketData } from '../api/marketData';
+import { selectCurrentUser } from '../redux/slices/authSlice';
+import NoFamilyState from '../components/NoFamilyState';
 
 const AnalyticsPage = () => {
+  const user = useSelector(selectCurrentUser);
   const [analytics, setAnalytics] = useState(null);
   const [market, setMarket] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -44,6 +48,10 @@ const AnalyticsPage = () => {
   }, []);
 
   if (loading) return <div className="skeleton h-64 w-full rounded-2xl" />;
+
+  if (!user?.family) {
+    return <NoFamilyState />;
+  }
 
   const memberNodes = analytics?.familyGraph?.nodes.filter((n) => n.type === 'member') || [];
 

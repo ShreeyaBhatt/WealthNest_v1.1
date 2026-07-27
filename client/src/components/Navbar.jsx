@@ -8,7 +8,7 @@ import { FiMenu, FiSun, FiMoon, FiLogOut, FiBell } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 import { toggleSidebar, toggleTheme, selectTheme } from '../redux/slices/uiSlice';
-import { logout, selectCurrentUser } from '../redux/slices/authSlice';
+import { logout, selectCurrentUser, selectRefreshToken } from '../redux/slices/authSlice';
 import { logout as logoutApi } from '../api/auth';
 import Avatar from './Avatar';
 
@@ -17,10 +17,11 @@ const Navbar = () => {
   const navigate = useNavigate();
   const theme = useSelector(selectTheme);
   const user = useSelector(selectCurrentUser);
+  const refreshToken = useSelector(selectRefreshToken);
 
   const handleLogout = async () => {
     try {
-      await logoutApi();
+      await logoutApi(refreshToken);
     } catch {
       // Even if the server call fails (e.g. token already expired),
       // we still want to clear the local session below.

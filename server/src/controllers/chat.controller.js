@@ -7,12 +7,12 @@
  * time they open the AI Assistant page.
  */
 
-const axios = require('axios');
 const crypto = require('crypto');
 const Investment = require('../models/Investment.model');
 const ChatHistory = require('../models/ChatHistory.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess, sendPaginated } = require('../utils/response');
+const { callDjango } = require('../utils/callDjango');
 
 // Messages saved before `sessionId` existed have no sessionId at all.
 // Rather than run a migration, we treat all of those as one shared
@@ -123,7 +123,7 @@ const sendMessage = async (req, res) => {
     };
   }
 
-  const djangoResponse = await axios.post(`${process.env.DJANGO_URL}/api/chat/`, { message, context });
+  const djangoResponse = await callDjango('/api/chat/', { message, context });
   const { reply } = djangoResponse.data.data;
 
   const entry = await ChatHistory.create({

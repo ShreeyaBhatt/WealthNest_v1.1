@@ -119,10 +119,13 @@ const userSchema = new mongoose.Schema(
     },
 
     // ─── Auth Tokens ─────────────────────────────────────────
-    // refresh token stored in DB so we can invalidate it on logout
-    refreshToken: {
-      type: String,
+    // One entry per logged-in device — a plain String would mean
+    // logging in on a second device silently logs the first one out.
+    // Capped at 5 in auth.controller.js so this can't grow forever.
+    refreshTokens: {
+      type: [String],
       select: false,
+      default: [],
     },
 
     // Password reset fields
@@ -149,7 +152,7 @@ const userSchema = new mongoose.Schema(
     toJSON: {
       transform: function (doc, ret) {
         delete ret.password;        // Never expose password
-        delete ret.refreshToken;    // Never expose refresh token
+        delete ret.refreshTokens;   // Never expose refresh tokens
         delete ret.__v;             // Remove Mongoose version key
         return ret;
       },

@@ -70,5 +70,6 @@ export const { setCredentials, updateUser, logout } = authSlice.actions;
 
 export const selectCurrentUser = (state) => state.auth.user;
 export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
+export const selectRefreshToken = (state) => state.auth.refreshToken;
 
 export default authSlice.reducer;

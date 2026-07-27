@@ -8,11 +8,9 @@
  */
 
 const Investment = require('../models/Investment.model');
-const Family = require('../models/Family.model');
 const FamilyMember = require('../models/FamilyMember.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess, sendPaginated } = require('../utils/response');
-const { createNotification } = require('../utils/notify');
 
 // Characters that mean something special inside a regular expression
 // (e.g. ".", "*", "+") need to be "escaped" before we drop user-typed
@@ -151,23 +149,6 @@ const createInvestment = async (req, res) => {
     ownerType,
     family: req.user.family,
   });
-
-  // Let the family head know a regular member added something new —
-  // this is a "nice to have" side effect, so if it fails we don't want
-  // that to fail the whole request (createNotification handles that).
-  if (req.user.role === 'family_member') {
-    const family = await Family.findById(req.user.family);
-    if (family) {
-      await createNotification({
-        user: family.head,
-        family: family._id,
-        type: 'investment_added',
-        title: 'New investment added',
-        message: `${req.user.name} added a new investment: ${investment.name}`,
-        link: `/investments/${investment._id}`,
-      });
-    }
-  }
 
   sendSuccess(res, investment, 'Investment added', 201);
 };

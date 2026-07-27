@@ -44,7 +44,7 @@ const register = async (req, res) => {
   // Log the brand-new user in right away by giving them tokens.
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
-  user.refreshToken = refreshToken;
+  user.refreshTokens = [refreshToken];
   await user.save();
 
   activityLogger.emit('activity', `New user registered: ${user.email}`);
@@ -60,7 +60,9 @@ const login = async (req, res) => {
 
   // Password has `select: false` in the schema, so we have to explicitly
   // ask for it here in order to check it against what the user typed.
-  const user = await User.findOne({ email }).select('+password');
+  // Also select refreshTokens so we can add to it below without wiping
+  // out any other devices this user is already logged in on.
+  const user = await User.findOne({ email }).select('+password +refreshTokens');
 
   if (!user || !(await user.comparePassword(password))) {
     // Same error message for "no such user" and "wrong password" —
@@ -76,7 +78,8 @@ const login = async (req, res) => {
 
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
-  user.refreshToken = refreshToken;
+  // Keep at most 5 devices logged in at once — old logins just fall off.
+  user.refreshTokens = [...user.refreshTokens, refreshToken].slice(-5);
   await user.save();
 
   sendSuccess(res, { user, accessToken, refreshToken }, 'Login successful');
@@ -100,14 +103,14 @@ const refresh = async (req, res) => {
   // Throws if the token is invalid/expired — caught by errorHandler.js.
   const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-  // refreshToken also has select:false, so ask for it explicitly.
-  const user = await User.findById(decoded.id).select('+refreshToken');
+  // refreshTokens also has select:false, so ask for it explicitly.
+  const user = await User.findById(decoded.id).select('+refreshTokens');
 
-  // Comparing against the token stored in the database (not just checking
-  // the signature) is what lets us "revoke" a refresh token on logout —
-  // once we clear it from the database, this check fails even if the
-  // token itself hasn't technically expired yet.
-  if (!user || user.refreshToken !== refreshToken) {
+  // Checking against the tokens stored in the database (not just the
+  // signature) is what lets us "revoke" one on logout — once it's
+  // removed from the database, this check fails even if the token
+  // itself hasn't technically expired yet.
+  if (!user || !user.refreshTokens.includes(refreshToken)) {
     throw new AppError('Invalid refresh token', 401);
   }
 
@@ -117,12 +120,14 @@ const refresh = async (req, res) => {
 
 /**
  * POST /api/auth/logout
- * Protected route — clears the stored refresh token so it can no longer
- * be used to mint new access tokens.
+ * Protected route — removes just THIS device's refresh token, so other
+ * logged-in devices stay logged in.
  */
 const logout = async (req, res) => {
-  req.user.refreshToken = undefined;
-  await req.user.save();
+  const { refreshToken } = req.body;
+  const user = await User.findById(req.user._id).select('+refreshTokens');
+  user.refreshTokens = user.refreshTokens.filter((t) => t !== refreshToken);
+  await user.save();
   sendSuccess(res, null, 'Logged out');
 };
 

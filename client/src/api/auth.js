@@ -10,7 +10,7 @@ import api from './axios';
 
 export const register = (formData) => api.post('/auth/register', formData).then((res) => res.data);
 export const login = (formData) => api.post('/auth/login', formData).then((res) => res.data);
-export const logout = () => api.post('/auth/logout').then((res) => res.data);
+export const logout = (refreshToken) => api.post('/auth/logout', { refreshToken }).then((res) => res.data);
 export const forgotPassword = (email) => api.post('/auth/forgot-password', { email }).then((res) => res.data);
 export const resetPassword = (token, newPassword) =>
   api.post('/auth/reset-password', { token, newPassword }).then((res) => res.data);

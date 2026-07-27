@@ -38,6 +38,15 @@ class PredictionRequestSerializer(serializers.Serializer):
         required=False,
     )
 
+    def validate(self, data):
+        # Sanity check — Node always computes these to sum to ~100 already.
+        total = data['equityPercent'] + data['debtPercent'] + data['goldPercent']
+        if not (99 <= total <= 101):
+            raise serializers.ValidationError(
+                f'equityPercent + debtPercent + goldPercent should sum to ~100, got {total:.1f}'
+            )
+        return data
+
 
 class RiskResponseSerializer(serializers.Serializer):
     riskCategory = serializers.ChoiceField(choices=['conservative', 'moderate', 'aggressive'])

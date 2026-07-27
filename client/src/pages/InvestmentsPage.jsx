@@ -96,6 +96,9 @@ const InvestmentsPage = () => {
     const sorted = [...investments].sort((a, b) => {
       const aVal = a[sort.key];
       const bVal = b[sort.key];
+      // returnPercentage is a Mongoose virtual formatted with .toFixed(2),
+      // so it's a string ("100.00") — sort it as a number, not text.
+      if (sort.key === 'returnPercentage') return Number(aVal) - Number(bVal);
       if (typeof aVal === 'string') return aVal.localeCompare(bVal);
       return Number(aVal) - Number(bVal);
     });
@@ -108,7 +111,7 @@ const InvestmentsPage = () => {
   const openAddForm = () => {
     setEditing(null);
     reset({
-      name: '', category: 'mutual_fund', amount: '', currentValue: '', purchaseDate: '', riskLevel: 'medium', notes: '',
+      name: '', category: 'mutual_fund', amount: '', currentValue: '', purchaseDate: '', maturityDate: '', riskLevel: 'medium', notes: '',
       ownerKey: family ? `User:${family.head._id}` : '',
     });
     setShowForm(true);
@@ -122,6 +125,7 @@ const InvestmentsPage = () => {
       amount: investment.amount,
       currentValue: investment.currentValue,
       purchaseDate: investment.purchaseDate?.slice(0, 10),
+      maturityDate: investment.maturityDate?.slice(0, 10) || '',
       riskLevel: investment.riskLevel,
       notes: investment.notes,
       ownerKey: `${investment.ownerType}:${investment.owner?._id}`,
@@ -132,7 +136,14 @@ const InvestmentsPage = () => {
   const onSubmit = async (formData) => {
     const { ownerKey, ...rest } = formData;
     const [ownerType, owner] = ownerKey.split(':');
-    const payload = { ...rest, owner, ownerType, amount: Number(formData.amount), currentValue: Number(formData.currentValue) };
+    const payload = {
+      ...rest,
+      owner,
+      ownerType,
+      amount: Number(formData.amount),
+      currentValue: Number(formData.currentValue),
+      maturityDate: formData.maturityDate || undefined,
+    };
     try {
       if (editing) {
         await updateInvestment(editing._id, payload);
@@ -271,6 +282,14 @@ const InvestmentsPage = () => {
             <select className="input" {...register('ownerKey', { required: true })}>
               {ownerOptions.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
             </select>
+            {ownerOptions.length === 0 && (
+              <p className="text-danger-500 text-sm mt-1">
+                You need to <Link to="/family" className="underline">create a family</Link> before adding investments.
+              </p>
+            )}
+            {errors.ownerKey && ownerOptions.length > 0 && (
+              <p className="text-danger-500 text-sm mt-1">Please select an owner</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -296,12 +315,20 @@ const InvestmentsPage = () => {
             <div>
               <label className="label">Current Value</label>
               <input type="number" className="input" {...register('currentValue', { required: true, min: 0 })} />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Usually same as Amount Invested at first — use Add Transaction later for gains, SIPs, etc.
+              </p>
             </div>
           </div>
 
           <div>
             <label className="label">Purchase Date</label>
             <input type="date" className="input" {...register('purchaseDate', { required: true })} />
+          </div>
+
+          <div>
+            <label className="label">Maturity Date (optional)</label>
+            <input type="date" className="input" {...register('maturityDate')} />
           </div>
 
           <div>

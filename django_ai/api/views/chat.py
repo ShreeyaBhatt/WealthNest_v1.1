@@ -13,10 +13,14 @@ message instead of crashing — same pattern as the email fallback on
 the Node side for a missing EMAIL_USER/EMAIL_PASS.
 """
 
+import logging
+
 import google.generativeai as genai
 from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+
+logger = logging.getLogger(__name__)
 
 
 def is_configured():
@@ -36,7 +40,10 @@ def build_prompt(message, context):
 
 @api_view(['POST'])
 def chat(request):
-    message = request.data.get('message', '').strip()
+    # .get(key, default) only applies when the key is missing — an
+    # explicit `null` still gets through and crashes .strip() otherwise.
+    raw_message = request.data.get('message')
+    message = raw_message.strip() if isinstance(raw_message, str) else ''
     context = request.data.get('context', {})
 
     if not message:
@@ -60,6 +67,8 @@ def chat(request):
         response = model.generate_content(build_prompt(message, context))
         reply = response.text
     except Exception as err:  # Gemini's SDK can raise several different error types
-        reply = f"Sorry, the AI assistant couldn't answer that right now ({err})."
+        # Log the real error, but don't echo internal details to the user.
+        logger.error('Gemini chat request failed: %s', err)
+        reply = "Sorry, the AI assistant couldn't answer that right now. Please try again in a moment."
 
     return Response({'success': True, 'message': 'Reply generated', 'data': {'reply': reply}})

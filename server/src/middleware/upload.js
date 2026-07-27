@@ -33,13 +33,18 @@ const storage = multer.diskStorage({
   },
 });
 
-// Only accept actual image files, and cap the size so nobody can fill
-// up the server's disk with a huge upload.
+// Only accept actual image files (MIME type AND extension both checked
+// against an allow-list — SVG is deliberately excluded since it can
+// carry a <script> tag, i.e. stored XSS via avatar upload).
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
+  const extension = path.extname(file.originalname).toLowerCase();
+  if (ALLOWED_MIME_TYPES.includes(file.mimetype) && ALLOWED_EXTENSIONS.includes(extension)) {
     cb(null, true);
   } else {
-    cb(new Error('Only image files are allowed'));
+    cb(new Error('Only JPG, PNG, GIF, or WEBP image files are allowed'));
   }
 };
 

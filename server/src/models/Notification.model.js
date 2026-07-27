@@ -8,10 +8,9 @@
  * unbounded inside every User document.
  *
  * WHO creates these?
- * Never directly from a route — always via utils/notify.js#createNotification,
- * called as a side effect of another action (e.g. being added to a family,
- * a family member adding an investment). A notification failure should
- * never block the action that triggered it.
+ * Never directly from a route — always via utils/notify.js (e.g. the
+ * maturity-reminder check). A notification failure should never block
+ * the action that triggered it.
  */
 
 const mongoose = require('mongoose');
@@ -37,7 +36,7 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: {
-        values: ['invite', 'investment_added', 'family_joined', 'family_removed', 'system', 'maturity_reminder'],
+        values: ['system', 'maturity_reminder'],
         message: 'Invalid notification type',
       },
     },

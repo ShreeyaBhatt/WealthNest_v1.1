@@ -22,7 +22,7 @@ const ProfilePage = () => {
   const user = useSelector(selectCurrentUser);
   const dispatch = useDispatch();
   const [uploading, setUploading] = useState(false);
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
       name: user.name,
       phone: user.phone || '',
@@ -92,17 +92,31 @@ const ProfilePage = () => {
 
         <div>
           <label className="label">Phone</label>
-          <input className="input" {...register('phone')} />
+          <input
+            className="input"
+            {...register('phone', { pattern: { value: /^[0-9]{10}$/, message: 'Phone must be a valid 10-digit number' } })}
+          />
+          {errors.phone && <p className="text-danger-500 text-sm mt-1">{errors.phone.message}</p>}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Age</label>
-            <input type="number" className="input" {...register('age')} />
+            <input
+              type="number"
+              className="input"
+              {...register('age', { min: { value: 18, message: 'Age must be between 18 and 100' }, max: { value: 100, message: 'Age must be between 18 and 100' } })}
+            />
+            {errors.age && <p className="text-danger-500 text-sm mt-1">{errors.age.message}</p>}
           </div>
           <div>
             <label className="label">Monthly Income</label>
-            <input type="number" className="input" {...register('income')} />
+            <input
+              type="number"
+              className="input"
+              {...register('income', { min: { value: 0, message: 'Income cannot be negative' } })}
+            />
+            {errors.income && <p className="text-danger-500 text-sm mt-1">{errors.income.message}</p>}
           </div>
         </div>
 

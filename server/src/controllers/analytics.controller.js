@@ -8,10 +8,10 @@
  * libraries do that; Node's job here is just gathering the data.
  */
 
-const axios = require('axios');
 const Investment = require('../models/Investment.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess } = require('../utils/response');
+const { callDjango } = require('../utils/callDjango');
 
 const getAnalytics = async (req, res) => {
   if (!req.user.family) {
@@ -31,7 +31,7 @@ const getAnalytics = async (req, res) => {
     };
   });
 
-  const djangoResponse = await axios.post(`${process.env.DJANGO_URL}/api/analytics/`, {
+  const djangoResponse = await callDjango('/api/analytics/', {
     categoryBreakdown,
     investments: investmentPayload,
   });

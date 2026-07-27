@@ -5,9 +5,13 @@ Every Django "app" has a configuration class.
 Here we configure the 'api' app and run startup tasks (like loading ML models).
 """
 
+import logging
+
 import joblib
 from django.apps import AppConfig
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 # These hold the loaded models in memory, so risk.py / future.py don't
 # have to read the .pkl file from disk on every single request (that
@@ -41,3 +45,8 @@ class ApiConfig(AppConfig):
         except FileNotFoundError:
             # Models haven't been trained yet — normal on a fresh checkout.
             pass
+        except Exception as err:
+            # A corrupt file or a scikit-learn version mismatch raises
+            # other exception types — same graceful "not ready" fallback
+            # instead of crashing the whole app at startup.
+            logger.warning('Could not load ML models: %s', err)

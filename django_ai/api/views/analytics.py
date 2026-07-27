@@ -73,21 +73,30 @@ def build_family_investment_graph(investments):
     """
     A NetworkX graph: one node per family member, one node per
     investment, and an edge from a member to every investment they own.
-    "Degree" (how many edges touch a node) then tells us, for free, how
-    many investments each member owns — real graph theory doing what a
-    manual loop would otherwise have to compute by hand.
+    "Degree" then tells us, for free, how many investments each member owns.
+
+    Investment nodes are keyed by index+name, not name alone — two
+    investments can share a name (e.g. two "PPF" entries), and name-only
+    keys would merge them into one node, silently losing an edge's value.
     """
     graph = nx.Graph()
 
-    for inv in investments:
+    for i, inv in enumerate(investments):
         owner_name = inv.get('owner') or 'Unknown'
-        investment_label = inv.get('name') or 'Investment'
-        graph.add_node(owner_name, node_type='member')
-        graph.add_node(investment_label, node_type='investment')
-        graph.add_edge(owner_name, investment_label, value=inv.get('currentValue', 0))
+        investment_name = inv.get('name') or 'Investment'
+        investment_id = f'investment::{i}::{investment_name}'
+
+        graph.add_node(owner_name, node_type='member', label=owner_name)
+        graph.add_node(investment_id, node_type='investment', label=investment_name)
+        graph.add_edge(owner_name, investment_id, value=inv.get('currentValue', 0))
 
     nodes = [
-        {'id': node_id, 'type': graph.nodes[node_id]['node_type'], 'degree': degree}
+        {
+            'id': node_id,
+            'type': graph.nodes[node_id]['node_type'],
+            'label': graph.nodes[node_id]['label'],
+            'degree': degree,
+        }
         for node_id, degree in graph.degree()
     ]
     edges = [{'source': u, 'target': v} for u, v in graph.edges()]

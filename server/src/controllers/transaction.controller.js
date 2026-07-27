@@ -61,6 +61,11 @@ const createTransaction = async (req, res) => {
   if (String(targetInvestment.family) !== String(req.user.family)) {
     throw new AppError('You do not have access to this investment', 403);
   }
+  // Soft-deleted investments are filtered out of the main lists/totals —
+  // don't let a new transaction silently grow one behind the scenes.
+  if (!targetInvestment.isActive) {
+    throw new AppError('This investment has been deleted — cannot record new transactions against it', 400);
+  }
 
   const isOwner = String(targetInvestment.owner) === String(req.user._id);
   if (req.user.role === 'family_member' && !isOwner) {
@@ -83,13 +88,18 @@ const createTransaction = async (req, res) => {
   // investment's current value; money going OUT (sell/withdrawal) lowers it.
   const movesValueUp = ['buy', 'sip', 'deposit', 'dividend', 'interest'];
   const movesValueDown = ['sell', 'withdrawal'];
+  const delta = movesValueDown.includes(type) ? -amount : movesValueUp.includes(type) ? amount : 0;
 
-  if (movesValueUp.includes(type)) {
-    targetInvestment.currentValue += amount;
-  } else if (movesValueDown.includes(type)) {
-    targetInvestment.currentValue = Math.max(0, targetInvestment.currentValue - amount);
+  // Atomic $inc, not read-modify-save — avoids two close-together
+  // transactions silently overwriting each other's currentValue update.
+  const updatedInvestment = await Investment.findByIdAndUpdate(
+    targetInvestment._id,
+    { $inc: { currentValue: delta } },
+    { new: true }
+  );
+  if (updatedInvestment.currentValue < 0) {
+    await Investment.findByIdAndUpdate(targetInvestment._id, { $set: { currentValue: 0 } });
   }
-  await targetInvestment.save();
 
   sendSuccess(res, transaction, 'Transaction recorded', 201);
 };

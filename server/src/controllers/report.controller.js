@@ -7,10 +7,10 @@
  * bytes straight back to the browser as a file download.
  */
 
-const axios = require('axios');
 const Investment = require('../models/Investment.model');
 const Family = require('../models/Family.model');
 const { AppError } = require('../middleware/errorHandler');
+const { callDjango } = require('../utils/callDjango');
 
 const getPortfolioReport = async (req, res) => {
   if (!req.user.family) {
@@ -46,7 +46,7 @@ const getPortfolioReport = async (req, res) => {
 
   // responseType: 'arraybuffer' — without this, axios would try to
   // decode the PDF bytes as UTF-8 text and corrupt the file.
-  const djangoResponse = await axios.post(`${process.env.DJANGO_URL}/api/pdf-report/`, payload, {
+  const djangoResponse = await callDjango('/api/pdf-report/', payload, {
     responseType: 'arraybuffer',
   });
 

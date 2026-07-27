@@ -13,6 +13,21 @@ import { FiDownload } from 'react-icons/fi';
 
 import { downloadPortfolioReport } from '../api/reports';
 
+// responseType: 'blob' applies to error responses too, so a failed
+// request's err.response.data arrives as a Blob instead of parsed JSON —
+// this reads it back out as text so the real backend message shows up.
+const blobErrorMessage = async (err) => {
+  const data = err.response?.data;
+  if (data instanceof Blob) {
+    try {
+      return JSON.parse(await data.text()).message || 'Could not generate report';
+    } catch {
+      return 'Could not generate report';
+    }
+  }
+  return data?.message || 'Could not generate report';
+};
+
 const ReportsPage = () => {
   const [downloading, setDownloading] = useState(false);
 
@@ -29,7 +44,7 @@ const ReportsPage = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not generate report');
+      toast.error(await blobErrorMessage(err));
     } finally {
       setDownloading(false);
     }

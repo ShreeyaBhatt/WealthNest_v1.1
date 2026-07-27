@@ -21,11 +21,11 @@
  * good enough for a student project's risk model.
  */
 
-const axios = require('axios');
 const Investment = require('../models/Investment.model');
 const Prediction = require('../models/Prediction.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess } = require('../utils/response');
+const { callDjango } = require('../utils/callDjango');
 
 const EQUITY_CATEGORIES = ['mutual_fund', 'stock', 'crypto'];
 const GOLD_CATEGORIES = ['gold'];
@@ -78,17 +78,32 @@ const buildFeaturesForUser = async (user) => {
   };
 };
 
+// A cached prediction is only worth reusing if the portfolio still
+// looks roughly like it did when we asked Django — otherwise "cached
+// for 24h" would keep showing a stale category after a big change.
+const PORTFOLIO_DRIFT_THRESHOLD = 5; // percentage points
+const portfolioDrifted = (fresh, cached) => {
+  const splitDrifted = ['equityPercent', 'debtPercent', 'goldPercent'].some(
+    (key) => Math.abs(fresh[key] - cached[key]) > PORTFOLIO_DRIFT_THRESHOLD
+  );
+  const investedDrifted =
+    cached.totalInvested > 0 && Math.abs(fresh.totalInvested - cached.totalInvested) / cached.totalInvested > 0.1;
+  return splitDrifted || investedDrifted;
+};
+
 /**
  * GET /api/predictions/risk
  */
 const getRiskPrediction = async (req, res) => {
+  const features = await buildFeaturesForUser(req.user);
+
   const cached = await Prediction.findOne({
     user: req.user._id,
     predictionType: 'risk',
     expiresAt: { $gt: new Date() },
   }).sort('-createdAt');
 
-  if (cached) {
+  if (cached && !portfolioDrifted(features, cached.inputFeatures)) {
     return sendSuccess(res, {
       riskCategory: cached.riskCategory,
       riskConfidence: cached.riskConfidence,
@@ -96,9 +111,7 @@ const getRiskPrediction = async (req, res) => {
     });
   }
 
-  const features = await buildFeaturesForUser(req.user);
-
-  const djangoResponse = await axios.post(`${process.env.DJANGO_URL}/api/predict-risk/`, features);
+  const djangoResponse = await callDjango('/api/predict-risk/', features);
   const { riskCategory, riskConfidence } = djangoResponse.data.data;
 
   await Prediction.create({
@@ -117,13 +130,15 @@ const getRiskPrediction = async (req, res) => {
  * GET /api/predictions/future
  */
 const getFuturePrediction = async (req, res) => {
+  const features = await buildFeaturesForUser(req.user);
+
   const cached = await Prediction.findOne({
     user: req.user._id,
     predictionType: 'future_value',
     expiresAt: { $gt: new Date() },
   }).sort('-createdAt');
 
-  if (cached) {
+  if (cached && !portfolioDrifted(features, cached.inputFeatures)) {
     return sendSuccess(res, {
       oneYear: cached.predictedValues.oneYear,
       threeYears: cached.predictedValues.threeYears,
@@ -132,9 +147,7 @@ const getFuturePrediction = async (req, res) => {
     });
   }
 
-  const features = await buildFeaturesForUser(req.user);
-
-  const djangoResponse = await axios.post(`${process.env.DJANGO_URL}/api/predict-future/`, features);
+  const djangoResponse = await callDjango('/api/predict-future/', features);
   const predictedValues = djangoResponse.data.data;
 
   await Prediction.create({

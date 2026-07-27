@@ -10,10 +10,13 @@
 
 import { useEffect, useState, useReducer } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { FiTrendingUp, FiDollarSign, FiPieChart, FiActivity } from 'react-icons/fi';
 
 import { getDashboard, getRiskPrediction, getFuturePrediction } from '../api/dashboard';
+import { selectCurrentUser } from '../redux/slices/authSlice';
+import NoFamilyState from '../components/NoFamilyState';
 
 const breakdownViewReducer = (state, action) => {
   switch (action.type) {
@@ -45,6 +48,7 @@ const StatCard = ({ icon: Icon, label, value, subLabel, accent, borderColor }) =
 );
 
 const DashboardPage = () => {
+  const user = useSelector(selectCurrentUser);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [breakdownState, dispatchBreakdown] = useReducer(breakdownViewReducer, { view: 'category' });
@@ -94,6 +98,10 @@ const DashboardPage = () => {
 
   if (loading) {
     return <div className="skeleton h-64 w-full rounded-2xl" />;
+  }
+
+  if (!user?.family) {
+    return <NoFamilyState />;
   }
 
   if (!stats) {
