@@ -41,12 +41,14 @@ router.post(
     body('amount').isFloat({ min: 1 }).withMessage('Amount must be greater than 0'),
     body('currentValue').isFloat({ min: 0 }).withMessage('Current value cannot be negative'),
     body('purchaseDate').notEmpty().withMessage('Purchase date is required'),
-    // body('maturityDate').optional().custom((value),{req})=>{
-    //   if ((value) && (req.body.purchaseDate) && (new Date(value) < new Date(req.body.purchaseDate)){
-    //     throw new Error('Maturity Date cannot be before the purchase date.')
-    //   } 
-    //   return true;
-    // })
+    body('maturityDate')
+      .optional()
+      .custom((value, { req }) => {
+        if (value && req.body.purchaseDate && new Date(value) < new Date(req.body.purchaseDate)) {
+          throw new Error('Maturity date cannot be before the purchase date');
+        }
+        return true;
+      }),
     body('ownerType').optional().isIn(['User', 'FamilyMember']).withMessage('Invalid ownerType'),
     body('owner').optional().isMongoId().withMessage('Invalid owner id'),
   ],
