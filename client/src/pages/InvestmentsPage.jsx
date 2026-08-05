@@ -44,7 +44,7 @@ const InvestmentsPage = () => {
 
   const user = useSelector(selectCurrentUser);
   const confirm = useConfirm();
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, getValues, formState: { errors } } = useForm();
 
   // "Owner" is stored on the form as a single "Type:id" string (e.g.
   // "User:64f..." or "FamilyMember:64f...") since a <select> can only
@@ -310,11 +310,13 @@ const InvestmentsPage = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Amount Invested</label>
-              <input type="number" className="input" {...register('amount', { required: true, min: 1 })} />
+              <input type="number" className="input" {...register('amount', { required: 'Amount is required', min: { value: 1, message: 'Amount must be greater than 0' } })} />
+              {errors.amount && <p className="text-danger-500 text-sm mt-1">{errors.amount.message}</p>}
             </div>
             <div>
               <label className="label">Current Value</label>
-              <input type="number" className="input" {...register('currentValue', { required: true, min: 0 })} />
+              <input type="number" className="input" {...register('currentValue', { required: 'Current value is required', min: { value: 0, message: 'Current value cannot be negative' } })} />
+              {errors.currentValue && <p className="text-danger-500 text-sm mt-1">{errors.currentValue.message}</p>}
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                 Usually same as Amount Invested at first — use Add Transaction later for gains, SIPs, etc.
               </p>
@@ -323,12 +325,22 @@ const InvestmentsPage = () => {
 
           <div>
             <label className="label">Purchase Date</label>
-            <input type="date" className="input" {...register('purchaseDate', { required: true })} />
+            <input type="date" className="input" {...register('purchaseDate', { required: 'Purchase date is required' })} />
+            {errors.purchaseDate && <p className="text-danger-500 text-sm mt-1">{errors.purchaseDate.message}</p>}
           </div>
 
           <div>
             <label className="label">Maturity Date (optional)</label>
-            <input type="date" className="input" {...register('maturityDate')} />
+            <input
+              type="date"
+              className="input"
+              {...register('maturityDate', {
+                validate: (value) =>
+                  !value || !getValues('purchaseDate') || value >= getValues('purchaseDate')
+                    || 'Maturity date cannot be before the purchase date',
+              })}
+            />
+            {errors.maturityDate && <p className="text-danger-500 text-sm mt-1">{errors.maturityDate.message}</p>}
           </div>
 
           <div>

@@ -183,11 +183,13 @@ const InvestmentDetailPage = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Units (optional)</label>
-              <input type="number" step="any" className="input" {...register('units')} />
+              <input type="number" step="any" className="input" {...register('units', { min: { value: 0, message: 'Cannot be negative' } })} />
+              {errors.units && <p className="text-danger-500 text-sm mt-1">{errors.units.message}</p>}
             </div>
             <div>
               <label className="label">Price/Unit (optional)</label>
-              <input type="number" step="any" className="input" {...register('unitPrice')} />
+              <input type="number" step="any" className="input" {...register('unitPrice', { min: { value: 0, message: 'Cannot be negative' } })} />
+              {errors.unitPrice && <p className="text-danger-500 text-sm mt-1">{errors.unitPrice.message}</p>}
             </div>
           </div>
 

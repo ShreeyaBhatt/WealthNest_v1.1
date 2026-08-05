@@ -181,6 +181,19 @@ const updateInvestment = async (req, res) => {
   if (req.body.expectedReturn !== undefined) investment.expectedReturn = req.body.expectedReturn;
   if (req.body.purchaseDate !== undefined) investment.purchaseDate = req.body.purchaseDate;
   if (req.body.maturityDate !== undefined) investment.maturityDate = req.body.maturityDate;
+
+  // Same rule as createInvestment's route validator — checked here
+  // instead, because an edit can change just ONE of the two dates
+  // (e.g. only maturityDate, with purchaseDate coming from what's
+  // already saved), so the route layer never sees both values together.
+  if (
+    investment.maturityDate &&
+    investment.purchaseDate &&
+    new Date(investment.maturityDate) < new Date(investment.purchaseDate)
+  ) {
+    throw new AppError('Maturity date cannot be before the purchase date', 400);
+  }
+
   if (req.body.riskLevel !== undefined) investment.riskLevel = req.body.riskLevel;
   if (req.body.notes !== undefined) investment.notes = req.body.notes;
   if (req.body.identifier !== undefined) investment.identifier = req.body.identifier;

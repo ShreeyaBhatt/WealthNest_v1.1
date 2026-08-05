@@ -20,7 +20,9 @@ router.post(
   [
     body('type').isIn(TYPES).withMessage('Invalid transaction type'),
     body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
-    body('investment').notEmpty().withMessage('investment id is required'),
+    body('investment').notEmpty().withMessage('investment id is required').isMongoId().withMessage('Invalid investment id'),
+    body('units').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Units cannot be negative'),
+    body('unitPrice').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Price per unit cannot be negative'),
   ],
   validate,
   transactionController.createTransaction

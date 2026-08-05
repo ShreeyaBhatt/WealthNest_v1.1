@@ -27,7 +27,7 @@ router.post(
   '/',
   protect,
   [
-    body('message').trim().notEmpty().withMessage('Message cannot be empty'),
+    body('message').trim().notEmpty().withMessage('Message cannot be empty').isLength({ max: 2000 }).withMessage('Message is too long (max 2000 characters)'),
     body('sessionId').optional({ checkFalsy: true }).isString().trim().isLength({ max: 100 }),
   ],
   validate,
