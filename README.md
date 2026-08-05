@@ -1,8 +1,38 @@
 # WealthNest
 
+<p align="left">
+<img alt="React" src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB"/>
+<img alt="Node.js" src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white"/>
+<img alt="Express" src="https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white"/>
+<img alt="Django REST" src="https://img.shields.io/badge/Django_REST-092E20?style=flat-square&logo=django&logoColor=white"/>
+<img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white"/>
+<img alt="Python" src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white"/>
+<img alt="scikit-learn" src="https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikitlearn&logoColor=white"/>
+</p>
+
+<!-- TODO: once deployed, replace this line with your actual link, e.g.:
+**[Live Demo →](https://wealthnest.vercel.app)** -->
+
 WealthNest is a full-stack family investment portfolio tracker. It consolidates a household's holdings into a single, role-aware dashboard and layers on machine-learning risk/growth prediction, an AI chat assistant, and automated portfolio reporting.
 
 The system is built as two independently deployable backends behind one frontend: a Node.js/Express service handles core application data (accounts, families, investments, transactions), while a Django service owns all AI/ML functionality (predictions, the chat assistant, analytics, and PDF generation). Application data lives in MongoDB; the ML service maintains its own SQLite store strictly for prediction logging, kept isolated from user data by design.
+
+
+<!--
+  TODO: Add 2-4 screenshots here — this section has the single biggest
+  impact on how quickly a recruiter understands what you built.
+
+  Suggested shots: the portfolio dashboard, the risk prediction view,
+  the AI chat assistant, and a generated PDF report.
+
+  1. Create a folder for them, e.g. docs/screenshots/
+  2. Add each image there
+  3. Reference them like this:
+
+  ![Portfolio Dashboard](docs/screenshots/dashboard.png)
+  ![AI Chat Assistant](docs/screenshots/chat-assistant.png)
+  ![Risk Prediction](docs/screenshots/risk-prediction.png)
+-->
 
 ## Architecture
 
