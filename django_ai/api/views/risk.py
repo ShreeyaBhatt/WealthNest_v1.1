@@ -38,11 +38,20 @@ class PredictRiskView(APIView):
         row = pd.DataFrame([{column: data[column] for column in feature_columns}])
 
         predicted_category = pipeline.predict(row)[0]
-        # predict_proba gives a probability for each possible class —
-        # the confidence is just how sure the model was about the class
-        # it actually picked.
+        # predict_proba gives a probability for each possible class — the
+        # confidence is how sure the model was about the class it
+        # actually picked (predicted_category), so we look up THAT
+        # class's own probability rather than just taking max(probabilities).
+        # Those aren't always the same number: SVC's probability=True uses
+        # Platt scaling, fit via its own internal cross-validation, which
+        # is a slightly different code path than the one .predict() uses —
+        # so on a small slice of inputs, the highest predict_proba() value
+        # belongs to a DIFFERENT class than the one .predict() returned.
+        # Reporting max(probabilities) here would then show a confidence
+        # number that doesn't actually belong to predicted_category.
         probabilities = pipeline.predict_proba(row)[0]
-        confidence = round(max(probabilities) * 100, 2)
+        class_index = list(pipeline.classes_).index(predicted_category)
+        confidence = round(probabilities[class_index] * 100, 2)
 
         result = {'riskCategory': predicted_category, 'riskConfidence': confidence}
 

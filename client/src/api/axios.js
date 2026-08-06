@@ -89,19 +89,20 @@ api.interceptors.response.use(
     }
 
     // ── Handle 403 Forbidden ──
+    // This one stays global: "you don't have permission" can happen on
+    // background/silent requests that have no catch block of their own
+    // (e.g. a sidebar count fetch), so nothing else would ever surface it.
     if (error.response?.status === 403) {
       toast.error('You do not have permission to perform this action.');
     }
 
-    // ── Handle 500 Server Error ──
-    if (error.response?.status >= 500) {
-      toast.error('Server error. Please try again later.');
-    }
-
-    // ── Handle Network Error (no internet) ──
-    if (!error.response) {
-      toast.error('Network error. Please check your connection.');
-    }
+    // 500s and network errors (no response at all) are intentionally NOT
+    // toasted here anymore — every page's own catch block already shows
+    // toast.error(err.response?.data?.message || '<page-specific fallback>'),
+    // and err.response is undefined for both cases, so that fallback text
+    // already covers them. Toasting here too just meant every failed
+    // request showed two stacked, redundant toasts (e.g. Register showed
+    // "Registration failed" AND "Network error..." at once).
 
     return Promise.reject(error);
   }
