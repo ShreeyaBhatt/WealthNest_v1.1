@@ -9,5 +9,6 @@ const dashboardController = require('../controllers/dashboard.controller');
 const router = express.Router();
 
 router.get('/', protect, dashboardController.getDashboard);
+router.get('/history', protect, dashboardController.getPortfolioHistory);
 
 module.exports = router;

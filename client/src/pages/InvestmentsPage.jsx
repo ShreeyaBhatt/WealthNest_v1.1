@@ -57,6 +57,14 @@ const InvestmentsPage = () => {
     : [];
 
   const loadInvestments = async () => {
+    // No family yet means the backend would just reject this with "Join
+    // a family first" — an expected state for a brand-new account, not a
+    // real error, so skip the request instead of firing it and toasting.
+    if (!user?.family) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const params = { page, limit: PAGE_SIZE };

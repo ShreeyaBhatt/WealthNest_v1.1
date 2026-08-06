@@ -17,7 +17,7 @@ import { useSelector } from 'react-redux';
 import Plot from 'react-plotly.js';
 import toast from 'react-hot-toast';
 
-import { getAnalytics } from '../api/dashboard';
+import { getAnalytics, getPortfolioHistory } from '../api/dashboard';
 import { getMarketData } from '../api/marketData';
 import { selectCurrentUser } from '../redux/slices/authSlice';
 import NoFamilyState from '../components/NoFamilyState';
@@ -26,26 +26,37 @@ const AnalyticsPage = () => {
   const user = useSelector(selectCurrentUser);
   const [analytics, setAnalytics] = useState(null);
   const [market, setMarket] = useState(null);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Same reasoning as DashboardPage: a user with no family yet would
+    // just get "Join a family first" back from the server — expected,
+    // not an error worth a toast — so skip the call entirely.
+    if (!user?.family) {
+      setLoading(false);
+      return;
+    }
+
     const load = async () => {
       try {
-        const [analyticsRes, marketRes] = await Promise.all([
+        const [analyticsRes, marketRes, historyRes] = await Promise.all([
           getAnalytics().catch((err) => {
             toast.error(err.response?.data?.message || 'Could not load analytics');
             return null;
           }),
           getMarketData().catch(() => null), // market data is a nice-to-have — fail silently
+          getPortfolioHistory().catch(() => null), // same — a brand-new family just has no history yet
         ]);
         if (analyticsRes) setAnalytics(analyticsRes.data);
         if (marketRes) setMarket(marketRes.data);
+        if (historyRes) setHistory(historyRes.data);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [user?.family]);
 
   if (loading) return <div className="skeleton h-64 w-full rounded-2xl" />;
 
@@ -85,6 +96,38 @@ const AnalyticsPage = () => {
               />
             )}
           </div>
+        </div>
+      )}
+
+      {history.length > 1 && (
+        <div className="card">
+          <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Portfolio Growth Over Time</h2>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+            One snapshot per day this family's dashboard was viewed — builds up over time.
+          </p>
+          <Plot
+            data={[
+              {
+                x: history.map((h) => h.snapshotDate.slice(0, 10)),
+                y: history.map((h) => h.totalValue),
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Current Value',
+                line: { color: '#3b82f6' },
+              },
+              {
+                x: history.map((h) => h.snapshotDate.slice(0, 10)),
+                y: history.map((h) => h.totalInvested),
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Total Invested',
+                line: { color: '#9ca3af', dash: 'dot' },
+              },
+            ]}
+            layout={{ autosize: true, height: 320, margin: { t: 10, l: 50, r: 10, b: 40 } }}
+            style={{ width: '100%' }}
+            config={{ responsive: true, displayModeBar: false }}
+          />
         </div>
       )}
 

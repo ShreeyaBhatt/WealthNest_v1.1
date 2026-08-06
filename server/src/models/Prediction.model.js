@@ -13,6 +13,8 @@
  * PREDICTION TYPES:
  * - risk: Portfolio risk classification (Conservative/Moderate/Aggressive)
  * - future_value: Predicted portfolio value in 1/3/5 years
+ * - recommendation: Suggested portfolio adjustments
+ * - health_score: A single 0-100 portfolio health score
  */
 
 const mongoose = require('mongoose');
@@ -36,7 +38,7 @@ const predictionSchema = new mongoose.Schema(
     predictionType: {
       type: String,
       required: true,
-      enum: ['risk', 'future_value'],
+      enum: ['risk', 'future_value', 'recommendation', 'health_score'],
     },
 
     // ─── Input Features ───────────────────────────────────────
@@ -69,6 +71,24 @@ const predictionSchema = new mongoose.Schema(
       threeYears: { type: Number },
       fiveYears:  { type: Number },
     },
+
+    // For recommendations:
+    recommendations: [
+      {
+        category: String,  // 'equity' | 'debt' | 'gold' | 'diversification'
+        action: String,    // 'increase' | 'decrease' | 'add'
+        reason: String,
+        _id: false,
+      },
+    ],
+
+    // For health score:
+    healthScore: { type: Number },       // 0-100
+    healthBreakdown: {
+      diversification: { type: Number },
+      riskAlignment: { type: Number },
+    },
+    healthSummary: { type: String },
 
     // ─── Cache Validity ───────────────────────────────────────
     // Predictions expire after 24 hours (stale data not useful)

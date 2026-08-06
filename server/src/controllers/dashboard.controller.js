@@ -2,13 +2,16 @@
  * src/controllers/dashboard.controller.js — Family Portfolio Summary
  *
  * WHY calculate everything live instead of reading from
- * PortfolioSnapshot.model.js (which was built for exactly this kind of
- * summary)? Because nothing writes to that collection yet — there's no
- * scheduled job populating daily snapshots. Reading from an empty
- * collection would just show zeros forever, which is worse than doing
- * the math ourselves from the Investment/Transaction documents that DO
- * have real data. A future phase can add the scheduled snapshot job and
- * a "portfolio growth over time" chart that reads from it.
+ * PortfolioSnapshot.model.js? Because a snapshot is only ever a point
+ * in TIME — it can't answer "what does the portfolio look like right
+ * now" on its own. So getDashboard still computes everything fresh from
+ * Investment/Transaction, and then — as a side effect, same pattern
+ * utils/notify.js already uses for maturity reminders (checked inline
+ * inside getNotifications, no scheduled job needed) — upserts TODAY's
+ * snapshot from that same result. No job scheduler exists in this
+ * project, so "whenever someone loads the dashboard" is the snapshot
+ * schedule. getPortfolioHistory below reads back whatever snapshots
+ * have accumulated, for the "portfolio growth over time" chart.
  *
  * WHY a MongoDB aggregation pipeline instead of just looping over
  * Investment.find() results in JavaScript (which is what this file
@@ -24,8 +27,49 @@
 const mongoose = require('mongoose');
 const Investment = require('../models/Investment.model');
 const Transaction = require('../models/Transaction.model');
+const PortfolioSnapshot = require('../models/PortfolioSnapshot.model');
 const { AppError } = require('../middleware/errorHandler');
 const { sendSuccess } = require('../utils/response');
+
+const SNAPSHOT_CATEGORIES = [
+  'mutual_fund', 'stock', 'gold', 'fd', 'bond',
+  'ppf', 'nps', 'real_estate', 'crypto', 'other',
+];
+
+/**
+ * Upserts today's PortfolioSnapshot from an already-computed dashboard
+ * result. Never lets a snapshot problem break the dashboard response
+ * itself — same "side effect, not core to the request" reasoning
+ * utils/notify.js already applies to notifications.
+ */
+const saveTodaysSnapshot = async (familyId, { totals, totalReturn, returnPercentage, byCategory, byMember }) => {
+  try {
+    const todayMidnight = new Date();
+    todayMidnight.setHours(0, 0, 0, 0);
+
+    const categoryBreakdown = Object.fromEntries(SNAPSHOT_CATEGORIES.map((c) => [c, 0]));
+    byCategory.forEach((row) => {
+      categoryBreakdown[row.category] = row.value;
+    });
+
+    const memberBreakdown = byMember.map((row) => ({ value: row.value, name: row.name }));
+
+    await PortfolioSnapshot.findOneAndUpdate(
+      { family: familyId, snapshotDate: todayMidnight },
+      {
+        totalValue: totals.totalValue,
+        totalInvested: totals.totalInvested,
+        totalReturn,
+        returnPercentage,
+        categoryBreakdown,
+        memberBreakdown,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  } catch (err) {
+    console.error('[dashboard] Could not save portfolio snapshot:', err.message);
+  }
+};
 
 // Turns an array of { key, value } rows into a plain { key: value } object
 // — keeps the response shape the same as before this pipeline rewrite.
@@ -109,16 +153,46 @@ const getDashboard = async (req, res) => {
     .sort('-transactionDate')
     .limit(5);
 
+  const roundedReturnPercentage = Number(returnPercentage.toFixed(2));
+
+  // Side effect — doesn't affect what gets sent back below, and never
+  // throws (see saveTodaysSnapshot's own try/catch).
+  await saveTodaysSnapshot(familyId, {
+    totals,
+    totalReturn,
+    returnPercentage: roundedReturnPercentage,
+    byCategory: facetResult.byCategory,
+    byMember: facetResult.byMember,
+  });
+
   sendSuccess(res, {
     investmentCount: totals.investmentCount,
     totalInvested: totals.totalInvested,
     totalValue: totals.totalValue,
     totalReturn,
-    returnPercentage: Number(returnPercentage.toFixed(2)),
+    returnPercentage: roundedReturnPercentage,
     categoryBreakdown: arrayToObject(facetResult.byCategory, 'category'),
     memberBreakdown: arrayToObject(facetResult.byMember, 'name'),
     recentTransactions,
   });
 };
 
-module.exports = { getDashboard };
+/**
+ * GET /api/dashboard/history
+ * Feeds the "portfolio growth over time" chart — the last 30 days'
+ * worth of snapshots saved by getDashboard above.
+ */
+const getPortfolioHistory = async (req, res) => {
+  if (!req.user.family) {
+    throw new AppError('Join a family first', 400);
+  }
+
+  const snapshots = await PortfolioSnapshot.find({ family: req.user.family })
+    .sort('snapshotDate')
+    .limit(30)
+    .select('snapshotDate totalValue totalInvested');
+
+  sendSuccess(res, snapshots);
+};
+
+module.exports = { getDashboard, getPortfolioHistory };

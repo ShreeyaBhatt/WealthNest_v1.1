@@ -161,4 +161,71 @@ const getFuturePrediction = async (req, res) => {
   sendSuccess(res, { ...predictedValues, cached: false });
 };
 
-module.exports = { getRiskPrediction, getFuturePrediction };
+/**
+ * GET /api/predictions/recommend
+ */
+const getRecommendations = async (req, res) => {
+  const features = await buildFeaturesForUser(req.user);
+
+  const cached = await Prediction.findOne({
+    user: req.user._id,
+    predictionType: 'recommendation',
+    expiresAt: { $gt: new Date() },
+  }).sort('-createdAt');
+
+  if (cached && !portfolioDrifted(features, cached.inputFeatures)) {
+    return sendSuccess(res, { recommendations: cached.recommendations, cached: true });
+  }
+
+  const djangoResponse = await callDjango('/api/recommend/', features);
+  const { recommendations } = djangoResponse.data.data;
+
+  await Prediction.create({
+    user: req.user._id,
+    family: req.user.family,
+    predictionType: 'recommendation',
+    inputFeatures: features,
+    recommendations,
+  });
+
+  sendSuccess(res, { recommendations, cached: false });
+};
+
+/**
+ * GET /api/predictions/health-score
+ */
+const getHealthScore = async (req, res) => {
+  const features = await buildFeaturesForUser(req.user);
+
+  const cached = await Prediction.findOne({
+    user: req.user._id,
+    predictionType: 'health_score',
+    expiresAt: { $gt: new Date() },
+  }).sort('-createdAt');
+
+  if (cached && !portfolioDrifted(features, cached.inputFeatures)) {
+    return sendSuccess(res, {
+      healthScore: cached.healthScore,
+      breakdown: cached.healthBreakdown,
+      summary: cached.healthSummary,
+      cached: true,
+    });
+  }
+
+  const djangoResponse = await callDjango('/api/health-score/', features);
+  const { healthScore, breakdown, summary } = djangoResponse.data.data;
+
+  await Prediction.create({
+    user: req.user._id,
+    family: req.user.family,
+    predictionType: 'health_score',
+    inputFeatures: features,
+    healthScore,
+    healthBreakdown: breakdown,
+    healthSummary: summary,
+  });
+
+  sendSuccess(res, { healthScore, breakdown, summary, cached: false });
+};
+
+module.exports = { getRiskPrediction, getFuturePrediction, getRecommendations, getHealthScore };

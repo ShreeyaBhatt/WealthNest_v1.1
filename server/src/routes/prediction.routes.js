@@ -10,5 +10,7 @@ const router = express.Router();
 
 router.get('/risk', protect, predictionController.getRiskPrediction);
 router.get('/future', protect, predictionController.getFuturePrediction);
+router.get('/recommend', protect, predictionController.getRecommendations);
+router.get('/health-score', protect, predictionController.getHealthScore);
 
 module.exports = router;

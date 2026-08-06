@@ -59,6 +59,29 @@ class FutureValueResponseSerializer(serializers.Serializer):
     fiveYears = serializers.FloatField()
 
 
+class RecommendationItemSerializer(serializers.Serializer):
+    """One suggested change — e.g. 'you're overweight in equity, consider
+    moving some of it into debt instruments.'"""
+    category = serializers.ChoiceField(choices=['equity', 'debt', 'gold', 'diversification'])
+    action = serializers.ChoiceField(choices=['increase', 'decrease', 'add'])
+    reason = serializers.CharField()
+
+
+class RecommendationResponseSerializer(serializers.Serializer):
+    recommendations = RecommendationItemSerializer(many=True)
+
+
+class HealthScoreBreakdownSerializer(serializers.Serializer):
+    diversification = serializers.FloatField()
+    riskAlignment = serializers.FloatField()
+
+
+class HealthScoreResponseSerializer(serializers.Serializer):
+    healthScore = serializers.FloatField()
+    breakdown = HealthScoreBreakdownSerializer()
+    summary = serializers.CharField()
+
+
 class PredictionLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = PredictionLog

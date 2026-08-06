@@ -14,7 +14,7 @@ import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 import { FiTrendingUp, FiDollarSign, FiPieChart, FiActivity } from 'react-icons/fi';
 
-import { getDashboard, getRiskPrediction, getFuturePrediction } from '../api/dashboard';
+import { getDashboard, getRiskPrediction, getFuturePrediction, getRecommendations, getHealthScore } from '../api/dashboard';
 import { selectCurrentUser } from '../redux/slices/authSlice';
 import NoFamilyState from '../components/NoFamilyState';
 
@@ -57,8 +57,21 @@ const DashboardPage = () => {
   const [riskLoading, setRiskLoading] = useState(false);
   const [future, setFuture] = useState(null);
   const [futureLoading, setFutureLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState(null);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [health, setHealth] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(false);
 
   useEffect(() => {
+    // A brand-new user has no family yet — the backend would reject this
+    // call with "Join a family first", which isn't a real error here, just
+    // an expected state. Skip the request entirely instead of firing it
+    // and then toasting the rejection right before NoFamilyState renders.
+    if (!user?.family) {
+      setLoading(false);
+      return;
+    }
+
     const loadDashboard = async () => {
       try {
         const res = await getDashboard();
@@ -70,7 +83,7 @@ const DashboardPage = () => {
       }
     };
     loadDashboard();
-  }, []);
+  }, [user?.family]);
 
   const handleGetRisk = async () => {
     setRiskLoading(true);
@@ -93,6 +106,30 @@ const DashboardPage = () => {
       toast.error(err.response?.data?.message || 'Could not get future value prediction');
     } finally {
       setFutureLoading(false);
+    }
+  };
+
+  const handleGetRecommendations = async () => {
+    setRecommendationsLoading(true);
+    try {
+      const res = await getRecommendations();
+      setRecommendations(res.data.recommendations);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not get recommendations');
+    } finally {
+      setRecommendationsLoading(false);
+    }
+  };
+
+  const handleGetHealth = async () => {
+    setHealthLoading(true);
+    try {
+      const res = await getHealthScore();
+      setHealth(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not get health score');
+    } finally {
+      setHealthLoading(false);
     }
   };
 
@@ -218,6 +255,48 @@ const DashboardPage = () => {
               ) : (
                 <button className="btn-secondary" onClick={handleGetFuture} disabled={futureLoading}>
                   {futureLoading ? 'Predicting...' : 'Predict Future Value'}
+                </button>
+              )}
+            </div>
+
+            <div className="card">
+              <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Portfolio Health Score</h2>
+              {health ? (
+                <div>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{health.healthScore}<span className="text-base font-normal text-gray-400">/100</span></p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{health.summary}</p>
+                  <ul className="text-xs text-gray-400 dark:text-gray-500 mt-2 space-y-0.5">
+                    <li>Diversification: {health.breakdown.diversification}/100</li>
+                    <li>Risk alignment: {health.breakdown.riskAlignment}/100</li>
+                  </ul>
+                </div>
+              ) : (
+                <button className="btn-secondary" onClick={handleGetHealth} disabled={healthLoading}>
+                  {healthLoading ? 'Calculating...' : 'Calculate Health Score'}
+                </button>
+              )}
+            </div>
+
+            <div className="card">
+              <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Recommendations</h2>
+              {recommendations ? (
+                recommendations.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Your portfolio already looks close to your risk profile's target split — nothing to flag right now.
+                  </p>
+                ) : (
+                  <ul className="text-sm space-y-2 text-gray-700 dark:text-gray-200">
+                    {recommendations.map((rec, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span className={`badge-${rec.action === 'decrease' ? 'red' : 'blue'} shrink-0`}>{rec.action}</span>
+                        <span>{rec.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )
+              ) : (
+                <button className="btn-secondary" onClick={handleGetRecommendations} disabled={recommendationsLoading}>
+                  {recommendationsLoading ? 'Analyzing...' : 'Get Recommendations'}
                 </button>
               )}
             </div>
