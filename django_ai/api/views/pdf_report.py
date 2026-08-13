@@ -101,6 +101,14 @@ def build_pdf(family_name, totals, investments):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 14),
     ]))
     elements.append(banner)
+
+    # A thin gold rule under the banner — the one deliberate accent color
+    # moment in the report, echoing the app's gold brand accent without
+    # using it anywhere else (same "sparingly" rule the live UI follows).
+    gold_rule = Table([['']], colWidths=[17.5 * cm], rowHeights=[0.12 * cm])
+    gold_rule.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, -1), colors.HexColor(GOLD))]))
+    elements.append(gold_rule)
+
     elements.append(Spacer(1, 0.8 * cm))
 
     # ── Summary "stat cards" ──
