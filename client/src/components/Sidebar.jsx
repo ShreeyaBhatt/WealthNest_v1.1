@@ -38,10 +38,10 @@ const Sidebar = () => {
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl border-l-2 transition-colors
                ${isActive
-                 ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-semibold'
-                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-800'}`
+                 ? 'bg-gold-50 text-gold-800 border-gold-500 dark:bg-gold-900/20 dark:text-gold-300 dark:border-gold-500 font-semibold'
+                 : 'border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-800'}`
             }
           >
             <Icon className="shrink-0" size={18} />
@@ -53,10 +53,10 @@ const Sidebar = () => {
           <NavLink
             to="/admin"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl border-l-2 transition-colors
                ${isActive
-                 ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-semibold'
-                 : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-800'}`
+                 ? 'bg-gold-50 text-gold-800 border-gold-500 dark:bg-gold-900/20 dark:text-gold-300 dark:border-gold-500 font-semibold'
+                 : 'border-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-800'}`
             }
           >
             <FiShield className="shrink-0" size={18} />

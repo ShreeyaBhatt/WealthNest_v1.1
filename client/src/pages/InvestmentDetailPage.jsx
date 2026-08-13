@@ -115,7 +115,7 @@ const InvestmentDetailPage = () => {
         </div>
         <div className="card">
           <p className="text-sm text-gray-500 dark:text-gray-400">Gain / Loss</p>
-          <p className={`text-xl font-bold ${investment.isProfit ? 'text-accent-600' : 'text-danger-500'}`}>
+          <p className={`text-xl font-bold ${investment.isProfit ? 'text-gain-600 dark:text-gain-400' : 'text-danger-500'}`}>
             {formatCurrency(investment.returnAmount)} ({investment.returnPercentage}%)
           </p>
         </div>

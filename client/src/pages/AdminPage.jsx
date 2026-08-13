@@ -4,8 +4,9 @@
 
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiUsers, FiUserCheck, FiShield } from 'react-icons/fi';
 import { getAllUsers } from '../api/users';
+import StatCard from '../components/StatCard';
 
 const AdminPage = () => {
   const [users, setUsers] = useState([]);
@@ -31,9 +32,35 @@ const AdminPage = () => {
 
   if (loading) return <div className="skeleton h-64 w-full rounded-2xl" />;
 
+  // Computed from the current page of already-fetched users — no extra
+  // API calls. "Total users" still comes from the real server-side count.
+  const activeOnPage = users.filter((u) => u.isActive).length;
+  const adminsOnPage = users.filter((u) => u.role === 'admin').length;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="section-title">Admin — All Users</h1>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          icon={FiUsers} label="Total Users" value={pagination.total}
+          subLabel="Across all pages"
+          accent="bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+          borderColor="border-primary-500"
+        />
+        <StatCard
+          icon={FiUserCheck} label="Active (this page)" value={activeOnPage}
+          subLabel={`Out of ${users.length} shown`}
+          accent="bg-gain-50 dark:bg-gain-900/30 text-gain-600 dark:text-gain-400"
+          borderColor="border-gain-500"
+        />
+        <StatCard
+          icon={FiShield} label="Admins (this page)" value={adminsOnPage}
+          subLabel={`Out of ${users.length} shown`}
+          accent="bg-gold-50 dark:bg-gold-900/30 text-gold-700 dark:text-gold-400"
+          borderColor="border-gold-400"
+        />
+      </div>
 
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
@@ -48,10 +75,13 @@ const AdminPage = () => {
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u._id} className="border-b border-gray-50 dark:border-dark-800 last:border-0">
+              <tr
+                key={u._id}
+                className="border-b border-gray-50 dark:border-dark-800 last:border-0 odd:bg-gray-50/60 dark:odd:bg-dark-800/40 hover:bg-gray-50 dark:hover:bg-dark-800 transition-colors"
+              >
                 <td className="py-3 font-medium text-gray-800 dark:text-gray-100">{u.name}</td>
                 <td className="py-3 text-gray-500 dark:text-gray-400">{u.email}</td>
-                <td className="py-3"><span className="badge-gray">{u.role}</span></td>
+                <td className="py-3"><span className={u.role === 'admin' ? 'badge-gold' : 'badge-gray'}>{u.role}</span></td>
                 <td className="py-3">{u.isActive ? <span className="badge-green">Active</span> : <span className="badge-red">Inactive</span>}</td>
                 <td className="py-3 text-gray-500 dark:text-gray-400">{new Date(u.createdAt).toLocaleDateString()}</td>
               </tr>

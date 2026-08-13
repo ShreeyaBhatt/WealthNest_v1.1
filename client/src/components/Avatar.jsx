@@ -9,7 +9,7 @@
  */
 
 const COLORS = [
-  'bg-primary-500', 'bg-accent-500', 'bg-amber-500', 'bg-rose-500',
+  'bg-primary-500', 'bg-gold-500', 'bg-amber-500', 'bg-rose-500',
   'bg-violet-500', 'bg-cyan-500', 'bg-pink-500', 'bg-emerald-500',
 ];
 

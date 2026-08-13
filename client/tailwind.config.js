@@ -34,37 +34,67 @@ export default {
   theme: {
     extend: {
       // ─── Custom Color Palette ─────────────────────────────
-      // Our WealthNest brand colors — finance-inspired blues and greens
+      // "Premium wealth management" identity — a restrained navy-indigo
+      // for everyday UI (buttons/links/focus rings/active states) plus a
+      // gold/bronze accent used SPARINGLY for the premium brand moments
+      // (wordmark, one hero CTA per page, icons/borders) — never as a
+      // wholesale button-fill, or dense pages (Investments/Admin/Family)
+      // would turn gaudy instead of "private bank."
       colors: {
         primary: {
-          50:  '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',  // Main primary color
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#172554',
+          50:  '#eef3f8',
+          100: '#dce7f1',
+          200: '#b3cbe1',
+          300: '#82a8ca',
+          400: '#5483ac',
+          500: '#3a6690',
+          600: '#2c4d70',  // Main primary color — navy-indigo, not consumer blue
+          700: '#213a56',
+          800: '#182a3f',
+          900: '#101d2c',
+          950: '#09121b',
         },
-        accent: {
+        // Premium brand accent — gold/bronze. Text needs 600/700 for
+        // contrast on light backgrounds; 400/500 are for fills, icons,
+        // borders, and glows only (raw gold fails as light-mode body text).
+        gold: {
+          50:  '#fbf7ec',
+          100: '#f6ecd0',
+          200: '#ecd79f',
+          300: '#dfbd68',
+          400: '#d4af37',
+          500: '#c2960e',
+          600: '#b45309',
+          700: '#92400e',
+          800: '#78350f',
+          900: '#451a03',
+        },
+        // Was `accent` — renamed because its only job is signalling
+        // profit/positive-return, never brand decoration (that's `gold`
+        // now). Values are unchanged, just the name is clearer.
+        gain: {
           50:  '#f0fdf4',
           100: '#dcfce7',
           200: '#bbf7d0',
           300: '#86efac',
           400: '#4ade80',
           500: '#22c55e',
-          600: '#16a34a',  // Main accent color (green for profit)
+          600: '#16a34a',  // Main gain color (green for profit)
           700: '#15803d',
           800: '#166534',
           900: '#14532d',
         },
         danger: {
+          50:  '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
           400: '#f87171',
           500: '#ef4444',  // Red for losses
           600: '#dc2626',
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
         },
         // Dark mode background colors
         dark: {
@@ -116,8 +146,9 @@ export default {
       boxShadow: {
         'card':      '0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05)',
         'card-dark': '0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2)',
-        'glow':      '0 0 20px rgba(59, 130, 246, 0.3)',
-        'glow-green':'0 0 20px rgba(34, 197, 94, 0.3)',
+        'glow':      '0 0 20px rgba(44, 77, 112, 0.35)',   // navy glow — matches new primary
+        'glow-gain': '0 0 20px rgba(34, 197, 94, 0.3)',    // was 'glow-green'
+        'glow-gold': '0 0 20px rgba(212, 175, 55, 0.35)',  // premium accent glow — hero CTAs
       },
 
       // ─── Custom Border Radius ─────────────────────────────

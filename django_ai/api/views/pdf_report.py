@@ -18,13 +18,15 @@ from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view
 
-# Brand colors — matches the React app's primary/accent Tailwind shades,
-# so the PDF looks like it belongs to the same product instead of a
-# generic ReportLab default. Kept as plain hex strings so they can be
-# dropped straight into Paragraph markup (colors.HexColor(...) wraps
-# them wherever an actual Color object is required, e.g. TableStyle).
-BRAND_BLUE = '#2563eb'
-LIGHT_BLUE = '#eff6ff'
+# Brand colors — matches the React app's navy/gold Tailwind shades (see
+# client/tailwind.config.js's `primary`/`gold` scales), so a report
+# downloaded mid-demo doesn't visibly clash with the live UI. Kept as
+# plain hex strings so they can be dropped straight into Paragraph markup
+# (colors.HexColor(...) wraps them wherever an actual Color object is
+# required, e.g. TableStyle).
+BRAND_NAVY = '#2c4d70'    # was '#2563eb' — matches primary-600
+LIGHT_NAVY = '#eef3f8'    # was '#eff6ff' — matches primary-50
+GOLD = '#d4af37'          # matches gold-400 — used sparingly, as an accent rule
 SLATE = '#475569'
 MUTED = '#64748b'
 GAIN_GREEN = '#16a34a'
@@ -44,7 +46,7 @@ def _draw_footer(canvas, doc):
     """A thin rule + page number on every page, drawn straight on the canvas
     (Platypus flowables don't repeat automatically per-page on their own)."""
     canvas.saveState()
-    canvas.setStrokeColor(colors.HexColor(BRAND_BLUE))
+    canvas.setStrokeColor(colors.HexColor(BRAND_NAVY))
     canvas.setLineWidth(0.5)
     canvas.line(1.5 * cm, 1.4 * cm, A4[0] - 1.5 * cm, 1.4 * cm)
     canvas.setFont('Helvetica', 8)
@@ -66,7 +68,7 @@ def build_pdf(family_name, totals, investments):
 
     section_heading_style = ParagraphStyle(
         'SectionHeading', parent=styles['Heading2'],
-        textColor=colors.HexColor(BRAND_BLUE), spaceBefore=4, spaceAfter=8,
+        textColor=colors.HexColor(BRAND_NAVY), spaceBefore=4, spaceAfter=8,
     )
     banner_title_style = ParagraphStyle(
         'BannerTitle', parent=styles['Normal'],
@@ -91,7 +93,7 @@ def build_pdf(family_name, totals, investments):
     )
     banner = Table([[banner_left, banner_right]], colWidths=[11 * cm, 6.5 * cm])
     banner.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor(BRAND_BLUE)),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor(BRAND_NAVY)),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING', (0, 0), (0, 0), 14),
         ('RIGHTPADDING', (-1, 0), (-1, 0), 14),
@@ -122,8 +124,8 @@ def build_pdf(family_name, totals, investments):
     ]]
     stats_table = Table(stat_row, colWidths=[4.375 * cm] * 4)
     stats_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor(LIGHT_BLUE)),
-        ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor(BRAND_BLUE)),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor(LIGHT_NAVY)),
+        ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor(BRAND_NAVY)),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.white),
         ('TOPPADDING', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
@@ -159,7 +161,7 @@ def build_pdf(family_name, totals, investments):
 
     category_table = Table(category_rows, colWidths=[5 * cm, 4.33 * cm, 4.33 * cm, 4.33 * cm])
     category_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(BRAND_BLUE)),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(BRAND_NAVY)),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
@@ -195,7 +197,7 @@ def build_pdf(family_name, totals, investments):
 
     investments_table = Table(rows, colWidths=[4.3 * cm, 2.7 * cm, 2.7 * cm, 2.8 * cm, 2.8 * cm, 2.2 * cm])
     table_style_commands = [
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(BRAND_BLUE)),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor(BRAND_NAVY)),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),

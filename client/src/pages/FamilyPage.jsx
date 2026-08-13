@@ -7,7 +7,7 @@
  * WealthNest account.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector, useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
@@ -27,9 +27,20 @@ const FamilyPage = () => {
   const [family, setFamily] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // `saving` (React state) can't block a second click that lands before
+  // React re-renders the disabled Save button — see RegisterPage.jsx for
+  // the full explanation. This ref is checked/set synchronously instead.
+  const isSavingMemberRef = useRef(false);
   const [showEditFamily, setShowEditFamily] = useState(false);
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingMember, setEditingMember] = useState(null); // null = adding new, object = editing existing
+  // These two forms didn't guard against double-submit at all (no
+  // disabled state, no ref) — a double-click on "Create Family" could
+  // fire createFamily() twice. Same ref-guard pattern as saving a member.
+  const [creatingFamily, setCreatingFamily] = useState(false);
+  const isCreatingFamilyRef = useRef(false);
+  const [savingFamily, setSavingFamily] = useState(false);
+  const isSavingFamilyRef = useRef(false);
 
   const user = useSelector(selectCurrentUser);
   const dispatch = useDispatch();
@@ -61,6 +72,9 @@ const FamilyPage = () => {
   }, []);
 
   const handleCreate = async (formData) => {
+    if (isCreatingFamilyRef.current) return;
+    isCreatingFamilyRef.current = true;
+    setCreatingFamily(true);
     try {
       await createFamily(formData);
 
@@ -78,6 +92,9 @@ const FamilyPage = () => {
       loadFamily();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not create family');
+    } finally {
+      isCreatingFamilyRef.current = false;
+      setCreatingFamily(false);
     }
   };
 
@@ -87,6 +104,9 @@ const FamilyPage = () => {
   };
 
   const handleUpdateFamily = async (formData) => {
+    if (isSavingFamilyRef.current) return;
+    isSavingFamilyRef.current = true;
+    setSavingFamily(true);
     try {
       await updateFamily(formData);
       toast.success('Family updated');
@@ -94,6 +114,9 @@ const FamilyPage = () => {
       loadFamily();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not update family');
+    } finally {
+      isSavingFamilyRef.current = false;
+      setSavingFamily(false);
     }
   };
 
@@ -124,6 +147,8 @@ const FamilyPage = () => {
       monthlyIncome: formData.monthlyIncome === '' ? undefined : Number(formData.monthlyIncome),
     };
 
+    if (isSavingMemberRef.current) return;
+    isSavingMemberRef.current = true;
     setSaving(true);
     try {
       if (editingMember) {
@@ -138,6 +163,7 @@ const FamilyPage = () => {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not save member');
     } finally {
+      isSavingMemberRef.current = false;
       setSaving(false);
     }
   };
@@ -172,7 +198,9 @@ const FamilyPage = () => {
             <label className="label">Description (optional)</label>
             <input className="input" {...createForm.register('description')} />
           </div>
-          <button type="submit" className="btn-primary w-full">Create Family</button>
+          <button type="submit" className="btn-primary w-full" disabled={creatingFamily}>
+            {creatingFamily ? 'Creating...' : 'Create Family'}
+          </button>
         </form>
       </div>
     );
@@ -210,11 +238,13 @@ const FamilyPage = () => {
       <div>
         <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Head of Family</h2>
         <div className="card flex items-center gap-4 max-w-sm">
-          <Avatar name={family.head.name} size="lg" />
+          <div className="rounded-full ring-2 ring-gold-400 ring-offset-2 ring-offset-white dark:ring-offset-dark-800">
+            <Avatar name={family.head.name} size="lg" />
+          </div>
           <div className="min-w-0">
             <p className="font-semibold text-gray-800 dark:text-gray-100 truncate">{family.head.name}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{family.head.email}</p>
-            <span className="badge-blue mt-1 inline-block">Head</span>
+            <span className="badge-gold mt-1 inline-block">Head</span>
           </div>
         </div>
       </div>
@@ -235,10 +265,25 @@ const FamilyPage = () => {
                   {member.email && (
                     <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{member.email}</p>
                   )}
-                  <div className="flex items-center gap-3 mt-2 text-sm text-gray-600 dark:text-gray-300 flex-wrap">
-                    {member.age != null && <span>{member.age} yrs</span>}
-                    {member.phone && <span>{member.phone}</span>}
-                    {member.monthlyIncome > 0 && <span>{formatCurrency(member.monthlyIncome)}/mo</span>}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 text-sm">
+                    {member.age != null && (
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Age</p>
+                        <p className="text-gray-700 dark:text-gray-200">{member.age} yrs</p>
+                      </div>
+                    )}
+                    {member.phone && (
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Phone</p>
+                        <p className="text-gray-700 dark:text-gray-200">{member.phone}</p>
+                      </div>
+                    )}
+                    {member.monthlyIncome > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Income</p>
+                        <p className="text-gray-700 dark:text-gray-200">{formatCurrency(member.monthlyIncome)}/mo</p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {canManage && (
@@ -314,7 +359,9 @@ const FamilyPage = () => {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setShowEditFamily(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Save Changes</button>
+            <button type="submit" className="btn-primary" disabled={savingFamily}>
+              {savingFamily ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
         </form>
       </Drawer>

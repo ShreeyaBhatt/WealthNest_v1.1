@@ -8,6 +8,8 @@
  * a centered modal would cover it completely.
  */
 
+import { FiX } from 'react-icons/fi';
+
 const Drawer = ({ open, onClose, title, children }) => {
   if (!open) return null;
 
@@ -24,7 +26,7 @@ const Drawer = ({ open, onClose, title, children }) => {
             onClick={onClose}
             aria-label="Close"
           >
-            ✕
+            <FiX size={18} />
           </button>
         </div>
         <div className="p-5">{children}</div>

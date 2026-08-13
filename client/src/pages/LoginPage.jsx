@@ -10,20 +10,27 @@
 import { useForm } from 'react-hook-form';
 import { useDispatch } from 'react-redux';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import { login } from '../api/auth';
 import { setCredentials } from '../redux/slices/authSlice';
+import AuthBrandPanel from '../components/AuthBrandPanel';
 
 const LoginPage = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [submitting, setSubmitting] = useState(false);
+  // See the matching comment in RegisterPage.jsx — `submitting` alone
+  // can't block a second click that lands before React re-renders the
+  // disabled button, so this ref (updated synchronously) backs it up.
+  const isSubmittingRef = useRef(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
   const onSubmit = async (formData) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setSubmitting(true);
     try {
       const res = await login(formData);
@@ -35,53 +42,58 @@ const LoginPage = () => {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
     } finally {
+      isSubmittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-900 px-4">
-      <div className="card w-full max-w-md animate-fade-in">
-        <div className="text-center mb-6">
-          <div className="text-5xl mb-2">💰</div>
-          <h1 className="text-2xl font-bold gradient-text">WealthNest</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Log in to your family portfolio</p>
+    <div className="min-h-screen grid lg:grid-cols-2">
+      <AuthBrandPanel />
+
+      <div className="flex items-center justify-center bg-gray-50 dark:bg-dark-900 px-4">
+        <div className="card w-full max-w-md animate-fade-in">
+          <div className="text-center mb-6">
+            <div className="text-5xl mb-2 lg:hidden">💰</div>
+            <h1 className="text-2xl font-bold gradient-text">WealthNest</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Log in to your family portfolio</p>
+          </div>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="label">Email</label>
+              <input
+                type="email"
+                className="input"
+                placeholder="you@example.com"
+                {...register('email', { required: 'Email is required' })}
+              />
+              {errors.email && <p className="text-danger-500 text-sm mt-1">{errors.email.message}</p>}
+            </div>
+
+            <div>
+              <label className="label">Password</label>
+              <input
+                type="password"
+                className="input"
+                placeholder="••••••••"
+                {...register('password', { required: 'Password is required' })}
+              />
+              {errors.password && <p className="text-danger-500 text-sm mt-1">{errors.password.message}</p>}
+            </div>
+
+            <button type="submit" className="btn-primary w-full" disabled={submitting}>
+              {submitting ? 'Logging in...' : 'Log In'}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
+            New here?{' '}
+            <Link to="/register" className="text-gold-600 dark:text-gold-400 font-medium">
+              Create an account
+            </Link>
+          </p>
         </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="label">Email</label>
-            <input
-              type="email"
-              className="input"
-              placeholder="you@example.com"
-              {...register('email', { required: 'Email is required' })}
-            />
-            {errors.email && <p className="text-danger-500 text-sm mt-1">{errors.email.message}</p>}
-          </div>
-
-          <div>
-            <label className="label">Password</label>
-            <input
-              type="password"
-              className="input"
-              placeholder="••••••••"
-              {...register('password', { required: 'Password is required' })}
-            />
-            {errors.password && <p className="text-danger-500 text-sm mt-1">{errors.password.message}</p>}
-          </div>
-
-          <button type="submit" className="btn-primary w-full" disabled={submitting}>
-            {submitting ? 'Logging in...' : 'Log In'}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
-          New here?{' '}
-          <Link to="/register" className="text-primary-600 dark:text-primary-400 font-medium">
-            Create an account
-          </Link>
-        </p>
       </div>
     </div>
   );

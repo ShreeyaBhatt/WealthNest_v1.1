@@ -187,12 +187,18 @@ const getPortfolioHistory = async (req, res) => {
     throw new AppError('Join a family first', 400);
   }
 
+  // Newest-first + limit(30) gets the most recent 30 snapshots — sorting
+  // ascending here instead would grab the OLDEST 30 (bug: once a family
+  // has more than 30 days of history, the chart would get stuck showing
+  // its earliest days forever and never include anything newer). We sort
+  // descending to get the right 30, then reverse back to chronological
+  // order in JS since the chart expects oldest-to-newest, left to right.
   const snapshots = await PortfolioSnapshot.find({ family: req.user.family })
-    .sort('snapshotDate')
+    .sort('-snapshotDate')
     .limit(30)
     .select('snapshotDate totalValue totalInvested');
 
-  sendSuccess(res, snapshots);
+  sendSuccess(res, snapshots.reverse());
 };
 
 module.exports = { getDashboard, getPortfolioHistory };

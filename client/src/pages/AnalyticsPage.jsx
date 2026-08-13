@@ -7,7 +7,7 @@
  * - an interactive Plotly chart (react-plotly.js renders Plotly's
  *   JSON output directly — no chart-drawing code needed on this side)
  * - a static Seaborn chart (just a base64 PNG image)
- * - a NetworkX graph of family members <-> investments, shown as a list
+ * - a NetworkX graph of family members <-> investments, shown as a chip grid
  *
  * Plus live market data (Django's web-scraping + REST API endpoint).
  */
@@ -20,10 +20,14 @@ import toast from 'react-hot-toast';
 import { getAnalytics, getPortfolioHistory } from '../api/dashboard';
 import { getMarketData } from '../api/marketData';
 import { selectCurrentUser } from '../redux/slices/authSlice';
+import { selectTheme } from '../redux/slices/uiSlice';
+import { getPlotlyThemeLayout } from '../utils/plotlyTheme';
 import NoFamilyState from '../components/NoFamilyState';
+import Avatar from '../components/Avatar';
 
 const AnalyticsPage = () => {
   const user = useSelector(selectCurrentUser);
+  const theme = useSelector(selectTheme);
   const [analytics, setAnalytics] = useState(null);
   const [market, setMarket] = useState(null);
   const [history, setHistory] = useState([]);
@@ -65,6 +69,7 @@ const AnalyticsPage = () => {
   }
 
   const memberNodes = analytics?.familyGraph?.nodes.filter((n) => n.type === 'member') || [];
+  const plotlyTheme = getPlotlyThemeLayout(theme);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -80,20 +85,29 @@ const AnalyticsPage = () => {
             <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Allocation</h2>
             <Plot
               data={analytics.categoryChartPlotly.data}
-              layout={{ ...analytics.categoryChartPlotly.layout, autosize: true, height: 320 }}
+              layout={{ ...analytics.categoryChartPlotly.layout, ...plotlyTheme, autosize: true, height: 320 }}
               style={{ width: '100%' }}
               config={{ responsive: true, displayModeBar: false }}
             />
           </div>
 
           <div className="card">
-            <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Value by Category</h2>
+            <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Value by Category</h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">Static preview, generated server-side</p>
             {analytics.categoryChartPNG && (
-              <img
-                src={`data:image/png;base64,${analytics.categoryChartPNG}`}
-                alt="Portfolio value by category"
-                className="w-full rounded-lg"
-              />
+              // Seaborn paints this PNG on a fixed white background
+              // server-side — it can't be re-themed from the client, so
+              // it gets an explicitly light panel (regardless of app
+              // theme) instead of sitting directly on a dark card, which
+              // would otherwise look like a rendering bug rather than an
+              // intentional "printed chart" treatment.
+              <div className="bg-white dark:bg-white rounded-xl p-3 border border-gray-200">
+                <img
+                  src={`data:image/png;base64,${analytics.categoryChartPNG}`}
+                  alt="Portfolio value by category"
+                  className="w-full rounded-lg"
+                />
+              </div>
             )}
           </div>
         </div>
@@ -113,7 +127,7 @@ const AnalyticsPage = () => {
                 type: 'scatter',
                 mode: 'lines+markers',
                 name: 'Current Value',
-                line: { color: '#3b82f6' },
+                line: { color: '#d4af37' }, // gold — the hero metric on this chart
               },
               {
                 x: history.map((h) => h.snapshotDate.slice(0, 10)),
@@ -121,10 +135,10 @@ const AnalyticsPage = () => {
                 type: 'scatter',
                 mode: 'lines',
                 name: 'Total Invested',
-                line: { color: '#9ca3af', dash: 'dot' },
+                line: { color: '#64748b', dash: 'dot' },
               },
             ]}
-            layout={{ autosize: true, height: 320, margin: { t: 10, l: 50, r: 10, b: 40 } }}
+            layout={{ ...plotlyTheme, autosize: true, height: 320, margin: { t: 10, l: 50, r: 10, b: 40 } }}
             style={{ width: '100%' }}
             config={{ responsive: true, displayModeBar: false }}
           />
@@ -135,15 +149,22 @@ const AnalyticsPage = () => {
         <div className="card">
           <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">Family Investment Graph</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-            Each member's "degree" below is how many investments connect to them in the graph.
+            Each member's investment count below is how many investments connect to them in the graph.
           </p>
-          <ul className="space-y-1 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {memberNodes.map((node) => (
-              <li key={node.id} className="text-gray-700 dark:text-gray-200">
-                <span className="font-medium">{node.id}</span> — {node.degree} investment{node.degree === 1 ? '' : 's'}
-              </li>
+              <div
+                key={node.id}
+                className="flex items-center gap-3 rounded-xl border border-gray-100 dark:border-dark-700 p-3"
+              >
+                <Avatar name={node.id} size="md" />
+                <span className="font-medium text-gray-800 dark:text-gray-100 truncate flex-1">{node.id}</span>
+                <span className="badge-gold shrink-0">
+                  {node.degree} investment{node.degree === 1 ? '' : 's'}
+                </span>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 
@@ -164,14 +185,14 @@ const AnalyticsPage = () => {
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
               Live Reference Prices
             </p>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500 dark:text-gray-400">Gold (per oz, INR)</p>
-                <p className="text-lg font-semibold">{market.goldPricePerOunceINR ?? '—'}</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-xl bg-gold-50 dark:bg-gold-900/20 p-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Gold (per oz, INR)</p>
+                <p className="text-lg font-semibold text-gold-700 dark:text-gold-400">{market.goldPricePerOunceINR ?? '—'}</p>
               </div>
-              <div>
-                <p className="text-gray-500 dark:text-gray-400">Bitcoin (INR)</p>
-                <p className="text-lg font-semibold">{market.bitcoinPriceINR ?? '—'}</p>
+              <div className="rounded-xl bg-gray-50 dark:bg-dark-700 p-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Bitcoin (INR)</p>
+                <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">{market.bitcoinPriceINR ?? '—'}</p>
               </div>
             </div>
           </div>

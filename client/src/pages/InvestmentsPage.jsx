@@ -2,7 +2,7 @@
  * src/pages/InvestmentsPage.jsx
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
@@ -18,6 +18,22 @@ import Drawer from '../components/Drawer';
 const CATEGORIES = ['mutual_fund', 'stock', 'gold', 'fd', 'bond', 'ppf', 'nps', 'real_estate', 'crypto', 'other'];
 const RISK_LEVELS = ['low', 'medium', 'high'];
 const PAGE_SIZE = 10;
+
+// Which badge color each category gets — previously every category used
+// the same badge-blue regardless of type. Gold investments get the new
+// badge-gold on purpose (a literal, thematic payoff for the category).
+const CATEGORY_BADGE = {
+  stock: 'badge-blue',
+  mutual_fund: 'badge-violet',
+  crypto: 'badge-violet',
+  gold: 'badge-gold',
+  fd: 'badge-green',
+  bond: 'badge-green',
+  ppf: 'badge-green',
+  nps: 'badge-green',
+  real_estate: 'badge-gray',
+  other: 'badge-gray',
+};
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value || 0);
@@ -41,6 +57,11 @@ const InvestmentsPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null); // null = adding new, object = editing existing
   const [family, setFamily] = useState(null); // head + members, for the "Owner" picker
+  const [saving, setSaving] = useState(false);
+  // The Save/Add button had no double-submit guard at all — a fast
+  // double-click could fire onSubmit twice before React re-renders the
+  // disabled button (see the same pattern/comment in RegisterPage.jsx).
+  const isSavingRef = useRef(false);
 
   const user = useSelector(selectCurrentUser);
   const confirm = useConfirm();
@@ -152,6 +173,9 @@ const InvestmentsPage = () => {
       currentValue: Number(formData.currentValue),
       maturityDate: formData.maturityDate || undefined,
     };
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
+    setSaving(true);
     try {
       if (editing) {
         await updateInvestment(editing._id, payload);
@@ -164,6 +188,9 @@ const InvestmentsPage = () => {
       loadInvestments();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Save failed');
+    } finally {
+      isSavingRef.current = false;
+      setSaving(false);
     }
   };
 
@@ -224,16 +251,19 @@ const InvestmentsPage = () => {
               </thead>
               <tbody>
                 {sortedInvestments.map((inv) => (
-                  <tr key={inv._id} className="border-b border-gray-50 dark:border-dark-800 last:border-0">
+                  <tr
+                    key={inv._id}
+                    className="border-b border-gray-50 dark:border-dark-800 last:border-0 odd:bg-gray-50/60 dark:odd:bg-dark-800/40 hover:bg-gray-50 dark:hover:bg-dark-800 transition-colors"
+                  >
                     <td className="py-3 font-medium">
-                      <Link to={`/investments/${inv._id}`} className="text-gray-800 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400">
+                      <Link to={`/investments/${inv._id}`} className="text-gray-800 dark:text-gray-100 hover:text-gold-600 dark:hover:text-gold-400">
                         {inv.name}
                       </Link>
                     </td>
                     <td className="py-3">{formatCurrency(inv.amount)}</td>
                     <td className="py-3">{formatCurrency(inv.currentValue)}</td>
-                    <td className={`py-3 ${inv.isProfit ? 'text-accent-600' : 'text-danger-500'}`}>{inv.returnPercentage}%</td>
-                    <td className="py-3"><span className="badge-blue">{inv.category}</span></td>
+                    <td className={`py-3 ${inv.isProfit ? 'text-gain-600 dark:text-gain-400' : 'text-danger-500'}`}>{inv.returnPercentage}%</td>
+                    <td className="py-3"><span className={CATEGORY_BADGE[inv.category] || 'badge-gray'}>{inv.category}</span></td>
                     <td className="py-3 text-gray-500 dark:text-gray-400">{inv.owner?.name}</td>
                     <td className="py-3">
                       {canModify(inv) && (
@@ -358,7 +388,9 @@ const InvestmentsPage = () => {
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">{editing ? 'Save Changes' : 'Add Investment'}</button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Saving...' : editing ? 'Save Changes' : 'Add Investment'}
+            </button>
           </div>
         </form>
       </Drawer>

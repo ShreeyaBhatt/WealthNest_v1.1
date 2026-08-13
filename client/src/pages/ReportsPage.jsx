@@ -9,9 +9,18 @@
 
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { FiDownload } from 'react-icons/fi';
+import { FiDownload, FiFileText, FiCheck } from 'react-icons/fi';
 
 import { downloadPortfolioReport } from '../api/reports';
+
+// What the PDF actually contains — verified against
+// django_ai/api/views/pdf_report.py's build_pdf() sections, so this list
+// stays honest rather than describing features that don't exist.
+const REPORT_CONTENTS = [
+  'Portfolio summary (total invested, current value, return)',
+  'Allocation by category',
+  'Full investment details, per holding',
+];
 
 // responseType: 'blob' applies to error responses too, so a failed
 // request's err.response.data arrives as a Blob instead of parsed JSON —
@@ -54,12 +63,27 @@ const ReportsPage = () => {
     <div className="max-w-lg animate-fade-in">
       <h1 className="section-title mb-6">Reports</h1>
 
-      <div className="card">
-        <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Portfolio Report (PDF)</h2>
+      <div className="card text-center">
+        <div className="relative w-16 h-16 mx-auto mb-4 rounded-xl bg-gold-50 dark:bg-gold-900/20 flex items-center justify-center">
+          <FiFileText size={28} className="text-gold-600 dark:text-gold-400" />
+          {/* A subtle "folded corner" accent — pure CSS, no image asset */}
+          <span className="absolute top-0 right-0 w-3 h-3 bg-gold-400 rounded-bl-md" />
+        </div>
+        <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">Portfolio Report (PDF)</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          A summary of your family's investments, generated on the fly with ReportLab.
+          Generated on the fly with ReportLab, straight from your family's live portfolio data.
         </p>
-        <button className="btn-primary flex items-center gap-2" onClick={handleDownload} disabled={downloading}>
+
+        <ul className="text-sm text-left text-gray-600 dark:text-gray-300 space-y-2 mb-6 max-w-xs mx-auto">
+          {REPORT_CONTENTS.map((item) => (
+            <li key={item} className="flex items-start gap-2">
+              <FiCheck className="text-gain-600 dark:text-gain-400 mt-0.5 shrink-0" size={16} />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+
+        <button className="btn-gold flex items-center gap-2 mx-auto" onClick={handleDownload} disabled={downloading}>
           <FiDownload /> {downloading ? 'Generating...' : 'Download PDF Report'}
         </button>
       </div>

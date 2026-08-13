@@ -18,9 +18,12 @@
 /* ─── CSS Custom Properties (Variables) ─────────────────── */
 /* These can be changed at runtime for theming */
 :root {
-  /* Brand Colors */
-  --color-primary:    #2563eb;
-  --color-accent:     #16a34a;
+  /* Brand Colors — kept in sync with tailwind.config.js's colors.* by hand
+     (nothing in the codebase actually reads these var(--color-*) values —
+     they're documentation/a single reference point, not live theming) */
+  --color-primary:    #2c4d70;
+  --color-gold:       #d4af37;
+  --color-gain:       #16a34a;
   --color-danger:     #dc2626;
   --color-warning:    #d97706;
 
@@ -92,9 +95,11 @@
    These are reusable patterns used across the app. */
 @layer components {
 
-  /* Card — the main content container used everywhere */
+  /* Card — the main content container used everywhere.
+     rounded-xl (not -2xl) on purpose — crisper corners read as more
+     "private bank," heavier rounding reads as a consumer/playful app. */
   .card {
-    @apply bg-white dark:bg-dark-800 rounded-2xl shadow-card p-6 border border-gray-100 dark:border-dark-700;
+    @apply bg-white dark:bg-dark-800 rounded-xl shadow-card p-6 border border-gray-100 dark:border-dark-700;
     transition: box-shadow var(--transition-base), transform var(--transition-base);
   }
 
@@ -123,8 +128,21 @@
 
   /* Danger Button */
   .btn-danger {
-    @apply bg-danger-500 hover:bg-danger-600 text-white font-semibold 
+    @apply bg-danger-500 hover:bg-danger-600 text-white font-semibold
            py-2.5 px-5 rounded-xl transition-all duration-200
+           active:scale-95;
+  }
+
+  /* Gold Button — the ONE hero call-to-action per page (Landing's "Get
+     Started", Reports' "Download PDF Report", etc). Deliberately not
+     used for everyday actions (Save/Add/etc keep .btn-primary) — gold
+     is a premium accent, not a replacement for the whole button system. */
+  .btn-gold {
+    @apply bg-gold-400 hover:bg-gold-600 text-dark-900 font-semibold
+           py-2.5 px-5 rounded-xl transition-all duration-200
+           hover:shadow-glow-gold
+           focus:ring-2 focus:ring-gold-500 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed
            active:scale-95;
   }
 
@@ -148,9 +166,12 @@
   }
   .badge-green  { @apply badge bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400; }
   .badge-blue   { @apply badge bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400; }
+  .badge-violet { @apply badge bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400; }
   .badge-red    { @apply badge bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400; }
   .badge-yellow { @apply badge bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400; }
   .badge-gray   { @apply badge bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300; }
+  /* "Premium" tag — admin role, Gold-category investments, family-head indicator */
+  .badge-gold   { @apply badge bg-gold-100 text-gold-800 dark:bg-gold-900/30 dark:text-gold-300; }
 
   /* Section Title */
   .section-title {
@@ -183,9 +204,30 @@
     animation: shimmer 1.5s infinite;
   }
 
-  /* Gradient text */
+  /* Gradient text — the WealthNest wordmark. Gold now, not primary→gain:
+     the wordmark is a brand moment, not a data/profit signal. */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-gold-300 via-gold-400 to-gold-600 bg-clip-text text-transparent;
+  }
+
+  /* Toggle switch — a real on/off control (used by SettingsPage's dark
+     mode toggle) instead of a plain text button. Pure CSS, no library:
+     .toggle-input is a visually-hidden checkbox; .toggle-track is its
+     next sibling <span>, styled off the checkbox's :checked state via
+     the plain CSS adjacent-sibling selector (+). */
+  .toggle-track {
+    @apply relative w-11 h-6 rounded-full bg-gray-300 dark:bg-dark-600
+           transition-colors duration-200 cursor-pointer;
+  }
+  .toggle-track::after {
+    content: '';
+    @apply absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200;
+  }
+  .toggle-input:checked + .toggle-track {
+    @apply bg-gold-500;
+  }
+  .toggle-input:checked + .toggle-track::after {
+    transform: translateX(1.25rem);
   }
 
   /* Glass morphism effect */
@@ -216,6 +258,6 @@
 
 /* ─── Text Selection Color ───────────────────────────────── */
 ::selection {
-  background-color: #3b82f6;
+  background-color: #2c4d70;
   color: white;
 }

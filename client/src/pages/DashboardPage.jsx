@@ -12,11 +12,12 @@ import { useEffect, useState, useReducer } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import { FiTrendingUp, FiDollarSign, FiPieChart, FiActivity } from 'react-icons/fi';
+import { FiTrendingUp, FiDollarSign, FiPieChart, FiActivity, FiCpu } from 'react-icons/fi';
 
 import { getDashboard, getRiskPrediction, getFuturePrediction, getRecommendations, getHealthScore } from '../api/dashboard';
 import { selectCurrentUser } from '../redux/slices/authSlice';
 import NoFamilyState from '../components/NoFamilyState';
+import StatCard from '../components/StatCard';
 
 const breakdownViewReducer = (state, action) => {
   switch (action.type) {
@@ -31,21 +32,6 @@ const breakdownViewReducer = (state, action) => {
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value || 0);
-
-// borderColor gives each card the same "colour accent" left border the
-// SRS mockups use, so the four stat cards read as a set at a glance.
-const StatCard = ({ icon: Icon, label, value, subLabel, accent, borderColor }) => (
-  <div className={`stat-card border-l-4 ${borderColor}`}>
-    <div className={`p-3 rounded-xl ${accent}`}>
-      <Icon size={22} />
-    </div>
-    <div>
-      <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="text-xl font-bold text-gray-900 dark:text-white">{value}</p>
-      {subLabel && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{subLabel}</p>}
-    </div>
-  </div>
-);
 
 const DashboardPage = () => {
   const user = useSelector(selectCurrentUser);
@@ -169,22 +155,22 @@ const DashboardPage = () => {
             <StatCard
               icon={FiTrendingUp} label="Current Value" value={formatCurrency(stats.totalValue)}
               subLabel="As of today"
-              accent="bg-accent-50 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400"
-              borderColor="border-accent-500"
+              accent="bg-gain-50 dark:bg-gain-900/30 text-gain-600 dark:text-gain-400"
+              borderColor="border-gain-500"
             />
             <StatCard
               icon={FiActivity}
               label="Total Return"
               value={`${formatCurrency(stats.totalReturn)} (${stats.returnPercentage}%)`}
               subLabel="Absolute return"
-              accent={stats.totalReturn >= 0 ? 'bg-accent-50 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400' : 'bg-danger-500/10 text-danger-500'}
-              borderColor={stats.totalReturn >= 0 ? 'border-accent-500' : 'border-danger-500'}
+              accent={stats.totalReturn >= 0 ? 'bg-gain-50 dark:bg-gain-900/30 text-gain-600 dark:text-gain-400' : 'bg-danger-500/10 text-danger-500'}
+              borderColor={stats.totalReturn >= 0 ? 'border-gain-500' : 'border-danger-500'}
             />
             <StatCard
               icon={FiPieChart} label="Investments" value={stats.investmentCount}
               subLabel="Active records"
-              accent="bg-gray-100 dark:bg-dark-700 text-gray-600 dark:text-gray-300"
-              borderColor="border-gray-300 dark:border-dark-600"
+              accent="bg-gold-50 dark:bg-gold-900/30 text-gold-700 dark:text-gold-400"
+              borderColor="border-gold-400"
             />
           </div>
 
@@ -238,8 +224,8 @@ const DashboardPage = () => {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Confidence: {risk.riskConfidence}%</p>
                 </div>
               ) : (
-                <button className="btn-secondary" onClick={handleGetRisk} disabled={riskLoading}>
-                  {riskLoading ? 'Predicting...' : 'Predict My Risk Profile'}
+                <button className="btn-secondary flex items-center gap-2" onClick={handleGetRisk} disabled={riskLoading}>
+                  <FiCpu size={16} className="text-gold-500" /> {riskLoading ? 'Predicting...' : 'Predict My Risk Profile'}
                 </button>
               )}
             </div>
@@ -253,8 +239,8 @@ const DashboardPage = () => {
                   <li>5 years: {formatCurrency(future.fiveYears)}</li>
                 </ul>
               ) : (
-                <button className="btn-secondary" onClick={handleGetFuture} disabled={futureLoading}>
-                  {futureLoading ? 'Predicting...' : 'Predict Future Value'}
+                <button className="btn-secondary flex items-center gap-2" onClick={handleGetFuture} disabled={futureLoading}>
+                  <FiCpu size={16} className="text-gold-500" /> {futureLoading ? 'Predicting...' : 'Predict Future Value'}
                 </button>
               )}
             </div>
@@ -271,8 +257,8 @@ const DashboardPage = () => {
                   </ul>
                 </div>
               ) : (
-                <button className="btn-secondary" onClick={handleGetHealth} disabled={healthLoading}>
-                  {healthLoading ? 'Calculating...' : 'Calculate Health Score'}
+                <button className="btn-secondary flex items-center gap-2" onClick={handleGetHealth} disabled={healthLoading}>
+                  <FiCpu size={16} className="text-gold-500" /> {healthLoading ? 'Calculating...' : 'Calculate Health Score'}
                 </button>
               )}
             </div>
@@ -295,8 +281,8 @@ const DashboardPage = () => {
                   </ul>
                 )
               ) : (
-                <button className="btn-secondary" onClick={handleGetRecommendations} disabled={recommendationsLoading}>
-                  {recommendationsLoading ? 'Analyzing...' : 'Get Recommendations'}
+                <button className="btn-secondary flex items-center gap-2" onClick={handleGetRecommendations} disabled={recommendationsLoading}>
+                  <FiCpu size={16} className="text-gold-500" /> {recommendationsLoading ? 'Analyzing...' : 'Get Recommendations'}
                 </button>
               )}
             </div>

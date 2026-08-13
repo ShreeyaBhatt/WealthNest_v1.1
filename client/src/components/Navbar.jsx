@@ -41,7 +41,7 @@ const Navbar = () => {
         >
           <FiMenu size={20} />
         </button>
-        <span className="text-lg font-bold gradient-text">💰 WealthNest</span>
+        <span className="text-lg font-bold tracking-tight gradient-text">💰 WealthNest</span>
       </div>
 
       <div className="flex items-center gap-2">

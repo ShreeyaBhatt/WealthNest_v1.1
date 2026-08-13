@@ -136,10 +136,10 @@ const AIAssistantPage = () => {
                 type="button"
                 onClick={() => handleSelectSession(s.sessionId)}
                 title={s.title}
-                className={`w-full text-left px-3 py-2 rounded-xl text-sm truncate transition-colors ${
+                className={`w-full text-left px-3 py-2 rounded-xl text-sm truncate transition-colors border-l-2 ${
                   s.sessionId === activeSessionId
-                    ? 'bg-primary-600 text-white'
-                    : 'hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-200'
+                    ? 'bg-gold-50 text-gold-800 border-gold-500 dark:bg-gold-900/20 dark:text-gold-300 font-semibold'
+                    : 'border-transparent hover:bg-gray-100 dark:hover:bg-dark-700 text-gray-700 dark:text-gray-200'
                 }`}
               >
                 {s.title || 'New conversation'}
@@ -168,7 +168,7 @@ const AIAssistantPage = () => {
                     </div>
                   </div>
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 dark:bg-dark-700 text-gray-800 dark:text-gray-100 rounded-2xl rounded-bl-sm px-4 py-2 max-w-md text-sm whitespace-pre-line">
+                    <div className="bg-gray-100 dark:bg-dark-700 text-gray-800 dark:text-gray-100 rounded-2xl rounded-bl-sm border-l-2 border-gold-400/50 px-4 py-2 max-w-md text-sm whitespace-pre-line">
                       {entry.reply}
                     </div>
                   </div>

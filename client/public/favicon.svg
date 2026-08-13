@@ -1,0 +1,13 @@
+<!--
+  favicon.svg — WealthNest's brand mark (💰) as a real favicon file.
+
+  WHY an SVG with a <text> element instead of an image?
+  There's no logo/illustration asset anywhere in this project — the 💰
+  emoji IS the brand mark, used in the Navbar, Landing, Login, Register,
+  etc. This is the standard "emoji as favicon" trick: the browser
+  rasterizes the emoji glyph at whatever pixel size the tab needs, so it
+  stays crisp at any size with zero image assets to manage.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <text x="50" y="72" font-size="72" text-anchor="middle">💰</text>
+</svg>

@@ -26,11 +26,16 @@ const chatHistorySchema = new mongoose.Schema(
       default: null,
     },
 
+    // Kept in sync with chat.routes.js's body('message').isLength({ max: 2000 })
+    // on purpose — that route-level check is the first line of defense,
+    // but a mismatched, stricter limit here would still reject a message
+    // that already passed it (after Node already paid for a real Gemini
+    // call through Django), discarding a reply the user already got.
     message: {
       type: String,
       required: [true, 'Message cannot be empty'],
       trim: true,
-      maxlength: [1000, 'Message cannot exceed 1000 characters'],
+      maxlength: [2000, 'Message cannot exceed 2000 characters'],
     },
 
     reply: {
