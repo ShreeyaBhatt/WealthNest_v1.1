@@ -1,0 +1,99 @@
+# render.yaml — Render Blueprint for WealthNest
+#
+# Deploys all three of WealthNest's OWN services in one pass: the
+# Django ML/AI backend, the Node/Express API gateway, and the React
+# static site. MongoDB is NOT included here — Render doesn't offer a
+# managed MongoDB, so that piece is a separate MongoDB Atlas free-tier
+# cluster (see the deploy guide for the exact steps).
+#
+# HOW TO USE:
+# 1. Push this file to your repo's default branch (it has to already
+#    be on GitHub/GitLab for Render to see it).
+# 2. In the Render dashboard: New + -> Blueprint -> pick this repo.
+# 3. Render reads this file and proposes all three services below.
+# 4. Anything marked `sync: false` needs a value typed in by hand —
+#    Render prompts for these during blueprint creation. Several of
+#    them (DJANGO_URL, CLIENT_URL, VITE_API_URL, VITE_DJANGO_URL) can
+#    only be filled in correctly AFTER the other services exist and
+#    you know their real *.onrender.com URLs — the deploy guide walks
+#    through the right order so you're not guessing.
+
+services:
+  # ── Django AI/ML backend (predictions, analytics, PDF reports, chat) ──
+  - type: web
+    name: wealthnest-django
+    runtime: python
+    plan: free
+    rootDir: django_ai
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    startCommand: "gunicorn core.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false   # set once the Node + client URLs are known — see guide
+      - key: GEMINI_API_KEY
+        sync: false   # optional — chat gracefully reports "not configured" without it
+      - key: ML_MODELS_DIR
+        value: ml_models/saved_models
+      - key: REPORTS_DIR
+        value: reports
+
+  # ── Node/Express API gateway (auth, CRUD, proxies to Django) ──
+  - type: web
+    name: wealthnest-server
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false   # MongoDB Atlas connection string — see guide
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_EXPIRE
+        value: 30d
+      - key: DJANGO_URL
+        sync: false   # e.g. https://wealthnest-django.onrender.com — see guide
+      - key: CLIENT_URL
+        sync: false   # e.g. https://wealthnest-client.onrender.com — see guide
+      - key: EMAIL_USER
+        sync: false   # optional — reset tokens just log to console without this
+      - key: EMAIL_PASS
+        sync: false   # optional
+
+  # ── React client (static build, served as-is) ──
+  - type: web
+    name: wealthnest-client
+    runtime: static
+    rootDir: client
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false   # e.g. https://wealthnest-server.onrender.com/api — see guide
+      - key: VITE_DJANGO_URL
+        sync: false   # e.g. https://wealthnest-django.onrender.com/api — see guide
+      - key: VITE_APP_NAME
+        value: WealthNest
+    routes:
+      # React Router handles routing client-side — without this, refreshing
+      # on any page other than "/" (e.g. /dashboard) 404s, because there's
+      # no actual file at that path on the static host. This sends every
+      # path to index.html and lets React Router take over from there.
+      - type: rewrite
+        path: /*
+        destination: /index.html

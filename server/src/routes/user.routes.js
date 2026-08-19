@@ -18,7 +18,13 @@ router.put(
   protect,
   [
     body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
-    body('phone').optional().matches(/^[0-9]{10}$/).withMessage('Phone must be a valid 10-digit number'),
+    // checkFalsy: true — without it, .optional() only skips validation
+    // when the field is missing entirely, NOT when it's an empty string.
+    // The Profile page's phone <input> always submits "" when left
+    // blank (not omitted), so without this, leaving Phone blank made
+    // saving ANY profile change fail with a 400 (see the same fix
+    // already applied to the member-phone validator in family.routes.js).
+    body('phone').optional({ checkFalsy: true }).matches(/^[0-9]{10}$/).withMessage('Phone must be a valid 10-digit number'),
     body('age').optional().isInt({ min: 18, max: 100 }).withMessage('Age must be between 18 and 100'),
     body('income').optional().isFloat({ min: 0 }).withMessage('Income cannot be negative'),
     body('riskProfile').optional().isIn(['conservative', 'moderate', 'aggressive']),

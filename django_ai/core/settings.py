@@ -54,6 +54,10 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
+    # WhiteNoise serves STATIC_ROOT directly from Django in production
+    # (mainly /admin/'s own CSS/JS) — must sit right after
+    # SecurityMiddleware, before everything else, per WhiteNoise's docs.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -110,6 +114,15 @@ USE_TZ = True
 # ─── Static Files ────────────────────────────────────────────
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Tells WhiteNoise to serve pre-compressed, cache-busted files (each
+# filename gets a content hash, e.g. admin.a3f1c9.css) — this only
+# matters once `collectstatic` has actually run (see the deploy guide),
+# which is a normal part of the Render build step, not local dev.
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
 
 # ─── Default Auto Field ──────────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -22,12 +22,21 @@
 # - django-cors-headers   : Allows Node.js to call Django API
 # - requests              : Calling external REST APIs (market data)
 # - beautifulsoup4        : Parsing/scraping HTML pages (market data)
+# - gunicorn              : Production WSGI server (manage.py runserver is
+#                           dev-only — see core/wsgi.py's own comment).
+#                           Needed to deploy anywhere, e.g. Render.
+# - whitenoise            : Serves Django's own static files (mainly the
+#                           /admin/ page's CSS/JS) directly from Django
+#                           itself in production, without needing a
+#                           separate static file host.
 # ============================================================
 
 Django==5.1.4
 djangorestframework==3.15.2
 python-decouple==3.8
 django-cors-headers==4.4.0
+gunicorn==23.0.0
+whitenoise==6.8.2
 
 # AI — Google Gemini
 google-generativeai==0.8.3
