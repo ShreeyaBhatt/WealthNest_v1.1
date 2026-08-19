@@ -89,11 +89,14 @@ services:
         sync: false   # e.g. https://wealthnest-django.onrender.com/api — see guide
       - key: VITE_APP_NAME
         value: WealthNest
-    routes:
-      # React Router handles routing client-side — without this, refreshing
-      # on any page other than "/" (e.g. /dashboard) 404s, because there's
-      # no actual file at that path on the static host. This sends every
-      # path to index.html and lets React Router take over from there.
-      - type: rewrite
-        path: /*
-        destination: /index.html
+    # NOTE: no `routes:` block here on purpose. React Router handles
+    # routing client-side, so without a rewrite rule, refreshing on any
+    # page other than "/" (e.g. /dashboard) 404s — there's no real file
+    # at that path on the static host. A `routes:` entry belongs here to
+    # fix that, but its exact Blueprint YAML syntax couldn't be verified
+    # confidently, and getting it wrong was breaking Blueprint parsing
+    # entirely (Render showed "0 services selected"). Add the same fix
+    # by hand instead, once this service exists: its dashboard page →
+    # Redirects/Rewrites → Add Rule → Source `/*`, Destination
+    # `/index.html`, Action `Rewrite`. That UI path is unambiguous and
+    # doesn't risk the whole Blueprint failing to import.
