@@ -36,7 +36,7 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: {
-        values: ['system', 'maturity_reminder'],
+        values: ['system', 'maturity_reminder', 'rebalance_alert'],
         message: 'Invalid notification type',
       },
     },

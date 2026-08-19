@@ -3,7 +3,8 @@ api/management/commands/train_models.py — Trains WealthNest's ML Models
 
 Running `python manage.py train_models` does everything needed to get
 predictions working:
-  1. Builds a dataset (synthetic — see the big note below)
+  1. Builds a dataset (real survey data + a documented simulation layer
+     on top — see "WHERE THE DATA COMES FROM" below)
   2. Cleans it up a little (pandas practice: dropna/fillna/drop_duplicates)
   3. Trains SEVERAL classification algorithms to predict risk category
      (kNN, Decision Tree, Random Forest, SVM), compares them, and keeps
@@ -14,28 +15,61 @@ predictions working:
   5. Saves both winning models to ml_models/saved_models/ as .pkl files,
      which api/apps.py loads into memory the next time Django starts
 
-WHY SYNTHETIC DATA?
-WealthNest doesn't have years of real historical portfolio data to
-learn from yet (it's a brand new app!). So instead we generate a
-realistic-looking fake dataset using simple, clearly-documented rules
-(e.g. "more money in equity + younger age tends to mean more aggressive
-risk tolerance"). This is completely normal for a student ML project
-that doesn't have a real dataset available — the important part is that
-the training PROCESS (cleaning data, comparing algorithms, evaluating
-with proper metrics) is real, even though the data feeding it is
-made up.
+WHERE THE DATA COMES FROM (updated on a later pass — this used to be
+100% synthetic; see git history for the old all-fake version):
+WealthNest doesn't have years of its own historical portfolio data to
+learn from yet (it's a brand new app!), and no public dataset exists
+that breaks a household's money down into WealthNest's exact categories
+(mutual fund / stock / gold / FD / bond / PPF / NPS / ...). So this is
+a HYBRID: real survey data for the parts that genuinely exist publicly,
+and a clearly-labeled simulation for the parts that don't.
 
-ACCURACY NOTES (added on a later pass — see git history if you want the
-"before" numbers):
+  REAL (from `django_ai/datasets/scf_risk_tolerance_2007.csv`):
+  age, income, totalInvested, and — most importantly — the riskProfile
+  LABEL itself. This file is the US Federal Reserve's 2007-2009 Survey
+  of Consumer Finances panel, pre-processed into a `TrueRiskTol` score
+  (the real, OBSERVED ratio of risky-to-total assets each household
+  actually held) by the "Machine Learning and Data Science Blueprints
+  for Finance" (O'Reilly) case study on investor risk tolerance —
+  sourced from https://github.com/tatsath/fin-ml (the standard teaching
+  dataset for exactly this kind of model). Using an *observed* risk
+  score instead of a self-reported survey answer avoids a well-known
+  bias: people are famously bad at accurately rating their own risk
+  tolerance, but what they actually held in risky assets doesn't lie.
+  income/totalInvested are US-dollar/net-worth figures from 2007 — we
+  keep their real RELATIVE shape (percentile rank) but rescale that
+  rank onto WealthNest's expected ₹ ranges via quantile mapping, since
+  a literal 2007 US dollar figure means nothing in an INR family
+  budgeting app. riskProfile is a real 3-way split of `TrueRiskTol`
+  into terciles (bottom third = conservative, middle = moderate, top =
+  aggressive) — balanced by construction, not by a hand-tuned formula.
+
+  STILL SIMULATED (clearly, on purpose): equityPercent/debtPercent/
+  goldPercent/investmentCount. No dataset ties a household's real net
+  worth to WealthNest's specific instrument categories, so these are
+  still generated the same way the old fully-synthetic version did —
+  via `rng.dirichlet(...)` for the split — EXCEPT the Dirichlet's bias
+  is now conditioned on each row's REAL riskProfile instead of an
+  invented formula, so "someone the SCF panel showed actually holding
+  mostly risky assets" ends up simulated with a mostly-equity split,
+  not a random one.
+
+  futureValue1yr's growth assumption is also grounded in real numbers
+  now instead of a guessed "12%/9%/6% by risk bucket" — see
+  EQUITY_ANNUAL_RETURN/DEBT_ANNUAL_RETURN/GOLD_ANNUAL_RETURN below for
+  the real historical figures used and where they came from.
+
+ACCURACY NOTES (from the original synthetic-data pass — see git history
+if you want the "before" numbers; still relevant since the TRAINING
+process below didn't change, only how the dataset is built):
   - `income` used to be pure noise: it was a feature the models trained
     on, but the OLD ground-truth formula below never used it, so it was
     just random static that distance-based models (kNN, SVM) had to
     scale and measure distance across for no reason. Real financial
     advice does lean on income (higher, more stable income usually means
-    more room to take investment risk), so `risk_score` now includes a
-    small income term — this is both more realistic AND removes a noise
-    feature, which is why kNN's accuracy went up the most after this
-    change (it's the algorithm most sensitive to irrelevant features).
+    more room to take investment risk) — and now that the label comes
+    from real survey data, income's relationship to risk tolerance is
+    whatever it really was for these households, not an assumption.
   - Model selection now uses 5-fold stratified cross-validation (mean
     accuracy across 5 different train/test splits) instead of a single
     80/20 split. A single split can make a mediocre model look great (or
@@ -87,58 +121,121 @@ FEATURE_COLUMNS = [
 ]
 
 
-def build_synthetic_dataset(n_rows=2000, seed=42):
-    """Creates a fake-but-realistic dataset of family investment profiles."""
+
+# Real long-run historical average annual returns, used to turn a
+# simulated equity/debt/gold split into a realistic "what would this
+# portfolio have earned" figure for the regressor's ground truth,
+# instead of a made-up flat rate. Sourced (August 2026):
+#   equity → Nifty 50 Total Return Index ~20-year CAGR, widely cited in
+#            the 11-15% range (NSE's own "Nifty 50 Whitepaper 2026"
+#            reports 12.44% TRI over 20 years) — we use the middle of
+#            that range.
+#   debt   → India's 10-year government bond (G-Sec) yield, which has
+#            traded roughly 6.5%-7.3% recently (a reasonable stand-in
+#            for FD/bond/PPF/NPS-style steady returns).
+#   gold   → India gold price CAGR in ₹ terms over the last 10-20 years,
+#            widely cited in the 10-13% range.
+# These are still simplifications (a single flat "expected" rate, not a
+# real year-by-year time series), but they're real, citable numbers
+# instead of guesses.
+EQUITY_ANNUAL_RETURN = 0.12
+DEBT_ANNUAL_RETURN = 0.07
+GOLD_ANNUAL_RETURN = 0.11
+
+# Where equityPercent/debtPercent/goldPercent get their Dirichlet "bias"
+# from, per real riskProfile bucket — see the module docstring's
+# "STILL SIMULATED" section for why this part can't be real data too.
+ALLOCATION_BIAS_BY_RISK_PROFILE = {
+    'aggressive': [5, 2, 1],     # skewed toward equity
+    'moderate': [2, 2, 1],       # same balanced mix the old synthetic version used
+    'conservative': [1, 5, 2],   # skewed toward debt
+}
+
+
+def build_training_dataset(seed=42):
+    """
+    Builds the training dataset from REAL Survey of Consumer Finances
+    data (age/income/totalInvested/riskProfile) plus a documented
+    simulation layer on top (equityPercent/debtPercent/goldPercent/
+    investmentCount/futureValue1yr) — see the module docstring's
+    "WHERE THE DATA COMES FROM" section for the full explanation of
+    which parts are real and why the rest can't be.
+    """
     rng = np.random.default_rng(seed)
 
-    age = rng.integers(18, 71, size=n_rows)
-    income = rng.integers(15000, 300000, size=n_rows)
-    total_invested = rng.integers(1000, 2000000, size=n_rows)
+    data_path = settings.BASE_DIR / 'datasets' / 'scf_risk_tolerance_2007.csv'
+    real_data = pd.read_csv(data_path, index_col=0)
+
+    # ── A little pandas EDA / cleaning practice ──
+    # Real survey data comes with genuine rows to clean, unlike a
+    # from-scratch synthetic dataset — the SCF panel repeats some rows
+    # across its "implicates" (the Fed's way of handling missing survey
+    # answers via multiple imputation), which shows up here as exact
+    # duplicate rows once we've selected just the columns we need.
+    real_data = real_data.dropna()
+    real_data = real_data.drop_duplicates()
+
+    # ── REAL: age ──
+    # Django's serializer only accepts 18-100 (see PredictionRequestSerializer) —
+    # the real data is already within that range, but clip defensively
+    # in case a future refresh of the source file isn't.
+    age = real_data['AGE07'].clip(18, 100).to_numpy()
+
+    # ── REAL: income and totalInvested, rescaled ──
+    # INCOME07/NETWORTH07 are real 2007 US-dollar figures — literally
+    # using those numbers would be meaningless in an INR family-budget
+    # app. Instead we keep each row's REAL percentile rank within the
+    # dataset (i.e. "this household was richer than 73% of the others")
+    # and map that rank onto the same ₹ ranges the old fully-synthetic
+    # version used, via simple linear quantile mapping. This preserves
+    # the real shape/inequality of the income & net-worth distribution
+    # while landing in a currency and scale that makes sense here.
+    income_rank = real_data['INCOME07'].rank(pct=True)
+    income = 15000 + income_rank.to_numpy() * (300000 - 15000)
+
+    # A few real households have negative net worth (more debt than
+    # assets) — that doesn't make sense as "amount invested", so floor
+    # it at 0 before ranking.
+    net_worth_floored = real_data['NETWORTH07'].clip(lower=0)
+    net_worth_rank = net_worth_floored.rank(pct=True)
+    total_invested = 1000 + net_worth_rank.to_numpy() * (2000000 - 1000)
+
+    # ── REAL: riskProfile (the label!) ──
+    # TrueRiskTol is the dataset's OBSERVED risky-assets ratio (real
+    # behavior, not a self-reported survey answer) — split into three
+    # equal-sized buckets so the classes stay balanced by construction.
+    risk_profile = pd.qcut(
+        real_data['TrueRiskTol'], q=3, labels=['conservative', 'moderate', 'aggressive']
+    ).astype(str).to_numpy()
+
+    # ── SIMULATED: equity/debt/gold split, biased by the REAL label ──
+    # rng.dirichlet gives three percentages that always add up to 100 —
+    # same mechanism the old fully-synthetic version used, but now the
+    # bias comes from each row's real riskProfile instead of a formula.
+    n_rows = len(real_data)
+    equity_percent = np.zeros(n_rows)
+    debt_percent = np.zeros(n_rows)
+    gold_percent = np.zeros(n_rows)
+    for i, profile in enumerate(risk_profile):
+        allocation = rng.dirichlet(ALLOCATION_BIAS_BY_RISK_PROFILE[profile]) * 100
+        equity_percent[i], debt_percent[i], gold_percent[i] = allocation
+
+    # ── SIMULATED: investmentCount ──
+    # No dataset ties net worth to "how many separate holdings" — kept
+    # as the same simple simulation the old version used.
     investment_count = rng.integers(1, 16, size=n_rows)
 
-    # rng.dirichlet gives us three percentages that always add up to
-    # 100 — a simple way to fake a realistic equity/debt/gold split.
-    allocations = rng.dirichlet(alpha=[2, 2, 1], size=n_rows) * 100
-    equity_percent = allocations[:, 0]
-    debt_percent = allocations[:, 1]
-    gold_percent = allocations[:, 2]
-
-    # ── Ground truth for the CLASSIFIER ──
-    # Rule of thumb: more equity and a younger age push you toward
-    # "aggressive"; more debt and an older age push you toward
-    # "conservative". Higher income also nudges risk tolerance up a
-    # little — someone earning more typically has more room to absorb a
-    # bad year (this also means `income` isn't a wasted/noise feature
-    # for the model — see the ACCURACY NOTES above). We add random noise
-    # so the boundary isn't perfectly clean (real people aren't
-    # perfectly predictable either).
-    noise = rng.normal(0, 5, size=n_rows)
-    income_term = (income - 150000) / 20000  # centered ~0, roughly -7..+7.5
-    risk_score = (
-        equity_percent
-        - 0.5 * debt_percent
-        - 0.3 * gold_percent
-        - 0.4 * (age - 30)
-        + income_term
-        + noise
-    )
-
-    risk_profile = np.select(
-        [risk_score >= 25, risk_score >= 0],
-        ['aggressive', 'moderate'],
-        default='conservative',
-    )
-
     # ── Ground truth for the REGRESSOR ──
-    # A simple "one year of compounding" formula: more aggressive
-    # portfolios are assumed to earn a higher (but noisier) return.
-    expected_annual_return = np.select(
-        [risk_profile == 'aggressive', risk_profile == 'moderate'],
-        [0.12, 0.09],
-        default=0.06,
+    # Blend the REAL historical asset-class returns (see the constants
+    # above) using each row's SIMULATED equity/debt/gold weights, then
+    # add a little noise so it isn't a perfectly deterministic formula.
+    blended_return = (
+        (equity_percent / 100) * EQUITY_ANNUAL_RETURN
+        + (debt_percent / 100) * DEBT_ANNUAL_RETURN
+        + (gold_percent / 100) * GOLD_ANNUAL_RETURN
     )
-    return_noise = rng.normal(0, 0.02, size=n_rows)
-    future_value_1yr = total_invested * (1 + expected_annual_return + return_noise)
+    return_noise = rng.normal(0, 0.03, size=n_rows)
+    future_value_1yr = total_invested * (1 + blended_return + return_noise)
 
     return pd.DataFrame({
         'age': age,
@@ -157,16 +254,16 @@ class Command(BaseCommand):
     help = 'Generates training data and trains the risk classifier + future-value regressor'
 
     def handle(self, *args, **options):
-        self.stdout.write('Generating synthetic training data...')
-        df = build_synthetic_dataset()
+        self.stdout.write('Building training data from real Survey of Consumer Finances data...')
+        df = build_training_dataset()
 
-        # ── A little pandas EDA / cleaning practice ──
-        # Real-world data always has a few missing or duplicate rows, so
-        # we fake a couple here just to show the cleaning step doing
-        # something (on data this synthetic, there's normally nothing
-        # to clean at all).
-        df.loc[df.sample(frac=0.02, random_state=1).index, 'income'] = np.nan
-        df['income'] = df['income'].fillna(df['income'].median())
+        # The real dropna()/drop_duplicates() cleaning already happened
+        # inside build_training_dataset (on the real source columns,
+        # before they were rescaled) — this second pass just catches
+        # any exact-duplicate ROWS the simulation layer could produce
+        # (unlikely, but cheap to check, and keeps the same pandas
+        # dropna/drop_duplicates practice the old synthetic version had).
+        df = df.dropna()
         df = df.drop_duplicates()
 
         self.stdout.write(f'Dataset shape: {df.shape}')

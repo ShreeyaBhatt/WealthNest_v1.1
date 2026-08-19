@@ -98,6 +98,20 @@ npm install
 npm run dev
 ```
 
+## Testing
+
+```bash
+# Node.js backend — Jest + Supertest, runs against a throw-away
+# "wealthnest_test" MongoDB database (never touches your real dev data)
+cd server
+npm test
+
+# Django AI backend — Django's built-in test runner, uses its own
+# throw-away SQLite test database
+cd django_ai
+python manage.py test api
+```
+
 ## Configuration
 
 Copy `.env.example` to `.env` in each service directory and populate the required values.

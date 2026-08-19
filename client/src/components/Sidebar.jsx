@@ -5,7 +5,7 @@
 import { NavLink } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import {
-  FiHome, FiTrendingUp, FiUsers, FiBell, FiPieChart,
+  FiHome, FiTrendingUp, FiUsers, FiBell, FiPieChart, FiTarget,
   FiMessageCircle, FiFileText, FiUser, FiSettings, FiShield,
 } from 'react-icons/fi';
 import { selectSidebarOpen } from '../redux/slices/uiSlice';
@@ -14,6 +14,7 @@ import { selectCurrentUser } from '../redux/slices/authSlice';
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: FiHome },
   { to: '/investments', label: 'Investments', icon: FiTrendingUp },
+  { to: '/goals', label: 'Goals', icon: FiTarget },
   { to: '/family', label: 'Family', icon: FiUsers },
   { to: '/analytics', label: 'Analytics', icon: FiPieChart },
   { to: '/ai-assistant', label: 'AI Assistant', icon: FiMessageCircle },

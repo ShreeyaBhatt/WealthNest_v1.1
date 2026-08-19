@@ -59,3 +59,9 @@ logs/
 
 # ─── Datasets (large files — add separately if needed) ──────
 django_ai/datasets/*.csv
+
+# Exception: this one IS committed on purpose — train_models.py reads
+# it directly (see that file's docstring), so it needs to exist on a
+# fresh clone without anyone having to run the scraper first. At ~330KB
+# it's small enough to just check in like any other project asset.
+!django_ai/datasets/scf_risk_tolerance_2007.csv

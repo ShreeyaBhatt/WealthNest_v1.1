@@ -21,6 +21,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import InvestmentDetailPage from './pages/InvestmentDetailPage';
+import GoalsPage from './pages/GoalsPage';
 import FamilyPage from './pages/FamilyPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
@@ -52,6 +53,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/investments" element={<InvestmentsPage />} />
         <Route path="/investments/:id" element={<InvestmentDetailPage />} />
+        <Route path="/goals" element={<GoalsPage />} />
         <Route path="/family" element={<FamilyPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/ai-assistant" element={<AIAssistantPage />} />
