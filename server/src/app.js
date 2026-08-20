@@ -39,6 +39,18 @@ const { errorHandler } = require('./middleware/errorHandler');
 // ─── Create Express App ──────────────────────────────────────
 const app = express();
 
+// ─── Trust Proxy ─────────────────────────────────────────────
+// Render (like Heroku/Railway/any PaaS) puts the app behind its own
+// reverse proxy, which adds an X-Forwarded-For header with the real
+// visitor's IP. Express ignores that header by default and treats every
+// request as coming from the proxy itself — express-rate-limit below
+// then refuses to start (it can't fairly rate-limit "everyone" as one
+// IP), throwing on every single request and crashing the whole server
+// in a boot loop. Setting this to 1 tells Express "trust exactly one
+// proxy hop in front of you," which makes req.ip resolve to the real
+// visitor again and fixes the rate limiter at the same time.
+app.set('trust proxy', 1);
+
 // ─── Security Middleware ─────────────────────────────────────
 // helmet() sets various HTTP headers to protect against common attacks
 // e.g., XSS, clickjacking, MIME sniffing
