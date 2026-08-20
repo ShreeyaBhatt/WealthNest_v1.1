@@ -24,7 +24,10 @@ const callDjango = async (path, payload, axiosConfig = {}) => {
           data = {};
         }
       }
-      throw new AppError(data?.message || 'The AI service rejected this request', err.response.status);
+      // Django's own errors (bad request, unhandled exception, etc.) come
+      // back as DRF's `{ detail: "..." }`, not our `{ message: "..." }`
+      // shape — check both so the real reason isn't swallowed.
+      throw new AppError(data?.message || data?.detail || 'The AI service rejected this request', err.response.status);
     }
     throw new AppError('The AI service is currently unavailable — please try again later', 503);
   }

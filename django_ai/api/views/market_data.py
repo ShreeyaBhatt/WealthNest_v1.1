@@ -129,11 +129,18 @@ def market_data(request):
     if _cache['data'] and (now - _cache['fetched_at']) < CACHE_SECONDS:
         return Response({'success': True, 'message': 'Market data (cached)', 'data': _cache['data']})
 
+    prices = fetch_live_prices()
     data = {
-        **fetch_live_prices(),
+        **prices,
         'investmentTipsSummary': scrape_investment_tips(),
     }
-    _cache['data'] = data
-    _cache['fetched_at'] = now
+
+    # Only cache for the full hour if the live price fetch actually
+    # worked. Caching a transient failure (both None, e.g. CoinGecko
+    # timed out or rate-limited us once) would otherwise pin "no data"
+    # on the Analytics page for a full hour even after CoinGecko recovers.
+    if prices.get('goldPricePerOunceINR') is not None or prices.get('bitcoinPriceINR') is not None:
+        _cache['data'] = data
+        _cache['fetched_at'] = now
 
     return Response({'success': True, 'message': 'Market data fetched', 'data': data})
