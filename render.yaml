@@ -95,8 +95,8 @@ services:
     # at that path on the static host. A `routes:` entry belongs here to
     # fix that, but its exact Blueprint YAML syntax couldn't be verified
     # confidently, and getting it wrong was breaking Blueprint parsing
-    # entirely (Render showed "0 services selected"). Add the same fix
-    # by hand instead, once this service exists: its dashboard page →
-    # Redirects/Rewrites → Add Rule → Source `/*`, Destination
-    # `/index.html`, Action `Rewrite`. That UI path is unambiguous and
-    # doesn't risk the whole Blueprint failing to import.
+    # entirely (Render showed "0 services selected"). Fixed instead via
+    # client/public/_redirects (Netlify-style syntax, which Render's
+    # static site hosting also reads) — Vite copies it into dist/ on
+    # every build, so it needs no manual dashboard step and survives a
+    # fresh Blueprint import.

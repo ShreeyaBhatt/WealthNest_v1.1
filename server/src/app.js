@@ -51,8 +51,20 @@ app.use(helmet({ crossOriginResourcePolicy: false }));
 // CORS = Cross-Origin Resource Sharing
 // This allows your React app (localhost:3000) to call this API (localhost:5000)
 // Without CORS, browsers block cross-origin requests for security
+//
+// CLIENT_URL is typed by hand into Render's dashboard, and a browser's
+// Origin header NEVER has a trailing slash — so a stray "...onrender.com/"
+// instead of "...onrender.com" would silently fail every single request
+// with a CORS error and no obvious clue why. Stripping it here removes
+// that whole class of mistake. Comma-separate multiple URLs (e.g. a
+// custom domain alongside the *.onrender.com one) same as Django's
+// CORS_ALLOWED_ORIGINS already does.
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/+$/, ''));
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: allowedOrigins,
   credentials: true,  // Allow cookies/auth headers
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 }));

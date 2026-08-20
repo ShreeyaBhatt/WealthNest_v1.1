@@ -1,0 +1,13 @@
+# client/public/_redirects — SPA fallback for Render's static site hosting
+#
+# React Router handles routing entirely client-side, so there's no real
+# file at a path like /dashboard — only index.html, which then loads the
+# JS that renders that route. Without this file, directly loading or
+# refreshing any page other than "/" 404s on Render, because the static
+# host looks for a literal /dashboard file and finds nothing.
+#
+# Vite copies everything in client/public/ into dist/ untouched, and
+# Render's static site hosting reads this exact filename (same format
+# Netlify uses) — so this one rule sends every path to index.html and
+# lets React Router take over from there.
+/*    /index.html   200
