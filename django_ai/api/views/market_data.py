@@ -108,9 +108,19 @@ def _fetch_from_binance():
     different issuer.
     """
     try:
-        btc = requests.get(BINANCE_URL, params={'symbol': 'BTCUSDT'}, timeout=8).json()
-        gold = requests.get(BINANCE_URL, params={'symbol': 'PAXGUSDT'}, timeout=8).json()
-        forex = requests.get(FOREX_URL, timeout=8).json()
+        btc_response = requests.get(BINANCE_URL, params={'symbol': 'BTCUSDT'}, timeout=8)
+        gold_response = requests.get(BINANCE_URL, params={'symbol': 'PAXGUSDT'}, timeout=8)
+        forex_response = requests.get(FOREX_URL, timeout=8)
+
+        # raise_for_status() on each individually — otherwise a rejected
+        # request (Binance geo/IP-blocking us, same idea as CoinGecko
+        # above) shows up several lines later as a confusing KeyError on
+        # 'price' instead of the real HTTP error and status code.
+        btc_response.raise_for_status()
+        gold_response.raise_for_status()
+        forex_response.raise_for_status()
+
+        btc, gold, forex = btc_response.json(), gold_response.json(), forex_response.json()
         usd_to_inr = forex['rates']['INR']
 
         return {
