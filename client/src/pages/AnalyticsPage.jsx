@@ -25,6 +25,11 @@ import { getPlotlyThemeLayout } from '../utils/plotlyTheme';
 import NoFamilyState from '../components/NoFamilyState';
 import Avatar from '../components/Avatar';
 
+// Same "no decimals, ₹ symbol" formatting used on Dashboard/Investments —
+// duplicated here rather than shared, matching this project's per-file style.
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
+
 const AnalyticsPage = () => {
   const user = useSelector(selectCurrentUser);
   const theme = useSelector(selectTheme);
@@ -188,11 +193,23 @@ const AnalyticsPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-xl bg-gold-50 dark:bg-gold-900/20 p-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Gold (per oz, INR)</p>
-                <p className="text-lg font-semibold text-gold-700 dark:text-gold-400">{market.goldPricePerOunceINR ?? '—'}</p>
+                {market.goldPricePerOunceINR != null ? (
+                  <p className="text-lg font-semibold text-gold-700 dark:text-gold-400">
+                    {formatCurrency(market.goldPricePerOunceINR)}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Price unavailable right now</p>
+                )}
               </div>
               <div className="rounded-xl bg-gray-50 dark:bg-dark-700 p-4">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Bitcoin (INR)</p>
-                <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">{market.bitcoinPriceINR ?? '—'}</p>
+                {market.bitcoinPriceINR != null ? (
+                  <p className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                    {formatCurrency(market.bitcoinPriceINR)}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Price unavailable right now</p>
+                )}
               </div>
             </div>
           </div>

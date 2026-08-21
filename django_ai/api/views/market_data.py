@@ -3,8 +3,9 @@ api/views/market_data.py — GET /api/market-data/
 
 Two syllabus skills live side by side here:
 1. "REST APIs using requests; JSON handling" — fetch a live gold/
-   bitcoin reference price from a public JSON API (CoinGecko, no key
-   required).
+   bitcoin reference price from a public JSON API (CoinGecko normally,
+   Binance + a forex rate as a fallback if CoinGecko comes back empty
+   — see fetch_live_prices()'s docstring for why a fallback exists).
 2. "Web scraping using BeautifulSoup" — pull real text out of a
    webpage's raw HTML (not a clean API), and save what we scraped to
    a CSV file, exactly like the practical task asks for. This scrapes
@@ -21,6 +22,7 @@ or go down — and none of that should ever break WealthNest itself.
 """
 
 import csv
+import logging
 import re
 import time
 from pathlib import Path
@@ -31,7 +33,11 @@ from django.conf import settings
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+logger = logging.getLogger(__name__)
+
 COINGECKO_URL = 'https://api.coingecko.com/api/v3/simple/price'
+BINANCE_URL = 'https://api.binance.com/api/v3/ticker/price'
+FOREX_URL = 'https://open.er-api.com/v6/latest/USD'
 INVESTMENT_TIPS_WIKI_URL = 'https://en.wikipedia.org/wiki/Asset_allocation'
 
 _cache = {'data': None, 'fetched_at': 0}
@@ -39,7 +45,21 @@ CACHE_SECONDS = 60 * 60  # 1 hour
 
 
 def fetch_live_prices():
-    """Unit 7.2 — REST APIs using requests + JSON handling."""
+    """
+    Unit 7.2 — REST APIs using requests + JSON handling.
+    Tries CoinGecko first; if that comes back empty for any reason
+    (see the comment on _fetch_from_coingecko), falls back to a
+    completely different provider (Binance) rather than giving up —
+    two independent providers failing at the same time is far less
+    likely than one.
+    """
+    prices = _fetch_from_coingecko()
+    if prices['goldPricePerOunceINR'] is None and prices['bitcoinPriceINR'] is None:
+        prices = _fetch_from_binance()
+    return prices
+
+
+def _fetch_from_coingecko():
     try:
         # CoinGecko sits behind Cloudflare, which quietly returns a 200
         # with EMPTY price data (not an error) to anonymous requests from
@@ -69,7 +89,36 @@ def fetch_live_prices():
             'goldPricePerOunceINR': data.get('tether-gold', {}).get('inr'),
             'bitcoinPriceINR': data.get('bitcoin', {}).get('inr'),
         }
-    except (requests.RequestException, ValueError):
+    except (requests.RequestException, ValueError) as err:
+        # Logged (not just swallowed) so a real cause — an invalid key,
+        # CoinGecko still blocking us, a genuine outage — shows up in
+        # Render's Logs tab instead of just silently falling back forever.
+        logger.warning('CoinGecko price fetch failed, falling back to Binance: %s', err)
+        return {'goldPricePerOunceINR': None, 'bitcoinPriceINR': None}
+
+
+def _fetch_from_binance():
+    """
+    Backup price source, used only when CoinGecko returns nothing.
+    Binance's public market-data endpoints (no account/key needed)
+    aren't gated behind the same kind of anonymous-datacenter-IP
+    filtering that blocks CoinGecko — but Binance only quotes in USDT,
+    so this needs one more call to convert to INR. PAXG (Pax Gold) is
+    Binance's own gold-pegged token — same idea as tether-gold above,
+    different issuer.
+    """
+    try:
+        btc = requests.get(BINANCE_URL, params={'symbol': 'BTCUSDT'}, timeout=8).json()
+        gold = requests.get(BINANCE_URL, params={'symbol': 'PAXGUSDT'}, timeout=8).json()
+        forex = requests.get(FOREX_URL, timeout=8).json()
+        usd_to_inr = forex['rates']['INR']
+
+        return {
+            'goldPricePerOunceINR': round(float(gold['price']) * usd_to_inr),
+            'bitcoinPriceINR': round(float(btc['price']) * usd_to_inr),
+        }
+    except (requests.RequestException, ValueError, KeyError) as err:
+        logger.warning('Binance fallback price fetch also failed: %s', err)
         return {'goldPricePerOunceINR': None, 'bitcoinPriceINR': None}
 
 
