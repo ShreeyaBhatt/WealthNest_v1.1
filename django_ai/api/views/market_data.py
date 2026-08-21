@@ -44,7 +44,18 @@ def fetch_live_prices():
         response = requests.get(
             COINGECKO_URL,
             params={'ids': 'tether-gold,bitcoin', 'vs_currencies': 'inr'},
-            timeout=5,
+            # Without a real User-Agent, requests' default ("python-requests/x.y")
+            # is exactly the kind of generic, bot-like header public APIs use to
+            # rate-limit or silently drop traffic — this hit us specifically on
+            # Render, where the outbound IP is shared across many unrelated
+            # apps: the exact same call worked fine from an ordinary machine.
+            # scrape_investment_tips() below already sends an identifying
+            # header for the same reason; this brings fetch_live_prices() in
+            # line with it. Also gave the request a little more time (8s, up
+            # from 5s) since Render's network path adds real latency on top
+            # of whatever CoinGecko itself takes.
+            headers={'User-Agent': 'WealthNest-Student-Project/1.0'},
+            timeout=8,
         )
         response.raise_for_status()
         data = response.json()  # requests parses the JSON response body for us
