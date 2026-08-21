@@ -41,20 +41,23 @@ CACHE_SECONDS = 60 * 60  # 1 hour
 def fetch_live_prices():
     """Unit 7.2 — REST APIs using requests + JSON handling."""
     try:
+        # CoinGecko sits behind Cloudflare, which quietly returns a 200
+        # with EMPTY price data (not an error) to anonymous requests from
+        # cloud/datacenter IP ranges like Render's — the identical request
+        # from an ordinary machine gets real prices back. A User-Agent
+        # header alone doesn't fix this (verified — it's an IP-reputation
+        # thing, not a header thing); a free "Demo" API key does, because
+        # it's tied to an account instead of judged purely on the calling
+        # IP. COINGECKO_API_KEY is optional — leave it unset and this
+        # still works fine for local dev off a residential/normal IP.
+        headers = {'User-Agent': 'WealthNest-Student-Project/1.0'}
+        if settings.COINGECKO_API_KEY:
+            headers['x-cg-demo-api-key'] = settings.COINGECKO_API_KEY
+
         response = requests.get(
             COINGECKO_URL,
             params={'ids': 'tether-gold,bitcoin', 'vs_currencies': 'inr'},
-            # Without a real User-Agent, requests' default ("python-requests/x.y")
-            # is exactly the kind of generic, bot-like header public APIs use to
-            # rate-limit or silently drop traffic — this hit us specifically on
-            # Render, where the outbound IP is shared across many unrelated
-            # apps: the exact same call worked fine from an ordinary machine.
-            # scrape_investment_tips() below already sends an identifying
-            # header for the same reason; this brings fetch_live_prices() in
-            # line with it. Also gave the request a little more time (8s, up
-            # from 5s) since Render's network path adds real latency on top
-            # of whatever CoinGecko itself takes.
-            headers={'User-Agent': 'WealthNest-Student-Project/1.0'},
+            headers=headers,
             timeout=8,
         )
         response.raise_for_status()

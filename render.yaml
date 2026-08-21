@@ -40,6 +40,8 @@ services:
         sync: false   # set once the Node + client URLs are known — see guide
       - key: GEMINI_API_KEY
         sync: false   # optional — chat gracefully reports "not configured" without it
+      - key: COINGECKO_API_KEY
+        sync: false   # optional but recommended on Render — see market_data.py's comment for why
       - key: ML_MODELS_DIR
         value: ml_models/saved_models
       - key: REPORTS_DIR

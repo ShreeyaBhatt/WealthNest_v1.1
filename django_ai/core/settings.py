@@ -159,6 +159,16 @@ CORS_ALLOW_HEADERS = ['content-type', 'authorization', 'x-requested-with']
 # ─── Gemini API Key ──────────────────────────────────────────
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
+# ─── CoinGecko API Key ────────────────────────────────────────
+# Optional — market_data.py works without this locally, but CoinGecko
+# (fronted by Cloudflare) silently returns empty prices for anonymous
+# requests from cloud/datacenter IPs like Render's, even though the
+# exact same request works fine from an ordinary machine. A free Demo
+# key (https://www.coingecko.com/en/api/pricing — "Demo" tier, no
+# credit card) is tied to an account instead of just an IP, and isn't
+# subject to that filtering. Blank is fine for local dev.
+COINGECKO_API_KEY = config('COINGECKO_API_KEY', default='')
+
 # ─── Custom Paths ────────────────────────────────────────────
 # Where ML models (pickle files) are stored
 ML_MODELS_DIR = BASE_DIR / config('ML_MODELS_DIR', default='ml_models/saved_models')
