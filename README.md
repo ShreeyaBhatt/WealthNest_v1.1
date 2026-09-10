@@ -1,4 +1,12 @@
-# WealthNest
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:4F46E5,100:22C55E&height=180&section=header&text=WealthNest&fontSize=48&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Family%20Investment%20Portfolio%20Tracker&descAlignY=58&descSize=18" alt="WealthNest banner" width="100%"/>
+</p>
+
+<p align="center">
+  <a href="https://github.com">
+    <img src="https://readme-typing-svg.demolab.com/?lines=Role-aware+family+portfolio+dashboard;ML-driven+risk+%26+growth+prediction;Gemini-powered+AI+chat+assistant;Automated+PDF+portfolio+reports&font=Fira+Code&center=true&width=600&height=45&color=4F46E5&vCenter=true&size=20&pause=1500" alt="Typing SVG"/>
+  </a>
+</p>
 
 <p align="left">
 <img alt="React" src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB"/>
@@ -34,6 +42,8 @@ The system is built as two independently deployable backends behind one frontend
   ![Risk Prediction](docs/screenshots/risk-prediction.png)
 -->
 
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:4F46E5,100:22C55E&height=3&width=100%25" alt="divider"/>
+
 ## Architecture
 
 | Layer | Technology |
@@ -62,6 +72,8 @@ WealthNest_v1.1/
 ├── docs/            API reference and supplementary documentation
 └── README.md
 ```
+
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:4F46E5,100:22C55E&height=3&width=100%25" alt="divider"/>
 
 ## Getting Started
 
@@ -122,6 +134,8 @@ Copy `.env.example` to `.env` in each service directory and populate the require
 | `django_ai` | `django_ai/.env` | `SECRET_KEY`, `GEMINI_API_KEY`, `ML_MODELS_DIR` |
 | `client` | `client/.env` | `VITE_API_URL`, `VITE_DJANGO_URL` |
 
+<img src="https://capsule-render.vercel.app/api?type=rect&color=0:4F46E5,100:22C55E&height=3&width=100%25" alt="divider"/>
+
 ## Roles & Permissions
 
 | Role | Scope |
@@ -155,3 +169,7 @@ Full API endpoint reference is maintained in [`docs/API_REFERENCE.md`](docs/API_
 ## License
 
 Academic project — B.Tech Computer Science Engineering, Semester IV.
+
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:22C55E,100:4F46E5&height=100&section=footer" alt="footer wave"/>
+</p>
