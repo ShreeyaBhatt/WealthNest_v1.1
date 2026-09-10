@@ -18,8 +18,7 @@
 <img alt="scikit-learn" src="https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikitlearn&logoColor=white"/>
 </p>
 
-<!-- TODO: once deployed, replace this line with your actual link, e.g.:
-**[Live Demo →](https://wealthnest.vercel.app)** -->
+**[Live Demo →](https://wealthnest-client.onrender.com)**
 
 WealthNest is a full-stack family investment portfolio tracker. It consolidates a household's holdings into a single, role-aware dashboard and layers on machine-learning risk/growth prediction, an AI chat assistant, and automated portfolio reporting.
 
